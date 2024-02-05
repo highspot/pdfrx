@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../../pdfrx.dart';
@@ -26,6 +28,8 @@ class PdfViewerParams {
     this.onInteractionStart,
     this.onInteractionUpdate,
     this.onDocumentChanged,
+    this.calculateInitialPageNumber,
+    this.onViewerReady,
     this.onPageChanged,
     this.getPageRenderingScale,
     this.scrollByMouseWheel = 0.2,
@@ -35,10 +39,11 @@ class PdfViewerParams {
     this.horizontalCacheExtent = 1.0,
     this.verticalCacheExtent = 1.0,
     this.viewerOverlayBuilder,
-    this.pageOverlayBuilder,
+    this.pageOverlaysBuilder,
     this.loadingBannerBuilder,
     this.errorBannerBuilder,
     this.linkWidgetBuilder,
+    this.pagePaintCallbacks,
     this.forceReload = false,
   });
 
@@ -120,7 +125,20 @@ class PdfViewerParams {
   final GestureScaleUpdateCallback? onInteractionUpdate;
 
   /// Function to notify that the document is loaded/changed.
+  ///
+  /// The function is called even if the document is null (it means the document is unloaded).
+  /// If you want to be notified when the viewer is ready to interact, use [onViewerReady] instead.
   final PdfViewerDocumentChangedCallback? onDocumentChanged;
+
+  /// Function called when the viewer is ready.
+  ///
+  /// Unlike [PdfViewerDocumentChangedCallback], this function is called after the viewer is ready to interact.
+  final PdfViewerReadyCallback? onViewerReady;
+
+  /// Function to calculate the initial page number.
+  ///
+  /// It is useful when you want to determine the initial page number based on the document content.
+  final PdfViewerCalculateInitialPageNumberFunction? calculateInitialPageNumber;
 
   /// Function called when the current page is changed.
   final PdfPageChangedCallback? onPageChanged;
@@ -201,21 +219,21 @@ class PdfViewerParams {
   /// For more information, see [PdfViewerScrollThumb].
   final PdfViewerOverlaysBuilder? viewerOverlayBuilder;
 
-  /// Add overlay to each page.
+  /// Add overlays to each page.
   ///
   /// This function is used to decorate each page with overlay widgets.
   /// The most typical use case is to add page number footer to each page.
   ///
   /// The following fragment illustrates how to add page number footer to each page:
   /// ```dart
-  /// pageOverlayBuilder: (context, pageRect, page) {
-  ///   return Align(
+  /// pageOverlaysBuilder: (context, pageRect, page) {
+  ///   return [Align(
   ///      alignment: Alignment.bottomCenter,
   ///      child: Text(page.pageNumber.toString(),
-  ///      style: const TextStyle(color: Colors.red)));
+  ///      style: const TextStyle(color: Colors.red)))];
   /// },
   /// ```
-  final PdfPageOverlayBuilder? pageOverlayBuilder;
+  final PdfPageOverlaysBuilder? pageOverlaysBuilder;
 
   /// Build loading banner.
   ///
@@ -241,6 +259,8 @@ class PdfViewerParams {
 
   /// Build link widget.
   final PdfLinkWidgetBuilder? linkWidgetBuilder;
+
+  final List<PdfViewerPagePaintCallback>? pagePaintCallbacks;
 
   /// Force reload the viewer.
   ///
@@ -293,6 +313,8 @@ class PdfViewerParams {
         other.onInteractionStart == onInteractionStart &&
         other.onInteractionUpdate == onInteractionUpdate &&
         other.onDocumentChanged == onDocumentChanged &&
+        other.calculateInitialPageNumber == calculateInitialPageNumber &&
+        other.onViewerReady == onViewerReady &&
         other.onPageChanged == onPageChanged &&
         other.getPageRenderingScale == getPageRenderingScale &&
         other.scrollByMouseWheel == scrollByMouseWheel &&
@@ -301,10 +323,11 @@ class PdfViewerParams {
         other.horizontalCacheExtent == horizontalCacheExtent &&
         other.verticalCacheExtent == verticalCacheExtent &&
         other.viewerOverlayBuilder == viewerOverlayBuilder &&
-        other.pageOverlayBuilder == pageOverlayBuilder &&
+        other.pageOverlaysBuilder == pageOverlaysBuilder &&
         other.loadingBannerBuilder == loadingBannerBuilder &&
         other.errorBannerBuilder == errorBannerBuilder &&
         other.linkWidgetBuilder == linkWidgetBuilder &&
+        other.pagePaintCallbacks == pagePaintCallbacks &&
         other.forceReload == forceReload;
   }
 
@@ -325,6 +348,8 @@ class PdfViewerParams {
         onInteractionStart.hashCode ^
         onInteractionUpdate.hashCode ^
         onDocumentChanged.hashCode ^
+        calculateInitialPageNumber.hashCode ^
+        onViewerReady.hashCode ^
         onPageChanged.hashCode ^
         getPageRenderingScale.hashCode ^
         scrollByMouseWheel.hashCode ^
@@ -333,17 +358,32 @@ class PdfViewerParams {
         horizontalCacheExtent.hashCode ^
         verticalCacheExtent.hashCode ^
         viewerOverlayBuilder.hashCode ^
-        pageOverlayBuilder.hashCode ^
+        pageOverlaysBuilder.hashCode ^
         loadingBannerBuilder.hashCode ^
         errorBannerBuilder.hashCode ^
         linkWidgetBuilder.hashCode ^
+        pagePaintCallbacks.hashCode ^
         forceReload.hashCode;
   }
 }
 
 /// Function to notify that the document is loaded/changed.
-typedef PdfViewerDocumentChangedCallback = void Function(
-    PdfDocument? documentRef);
+typedef PdfViewerDocumentChangedCallback = void Function(PdfDocument? document);
+
+/// Function to calculate the initial page number.
+///
+/// If the function returns null, the viewer will show the page of [PdfViewer.initialPageNumber].
+typedef PdfViewerCalculateInitialPageNumberFunction = int? Function(
+  PdfDocument document,
+  PdfViewerController controller,
+);
+
+/// Function called when the viewer is ready.
+///
+typedef PdfViewerReadyCallback = void Function(
+  PdfDocument document,
+  PdfViewerController controller,
+);
 
 /// Function called when the current page is changed.
 typedef PdfPageChangedCallback = void Function(int? pageNumber);
@@ -381,7 +421,7 @@ typedef PdfViewerOverlaysBuilder = List<Widget> Function(
 ///
 /// [pageRect] is the rectangle of the page in the viewer.
 /// [page] is the page.
-typedef PdfPageOverlayBuilder = Widget? Function(
+typedef PdfPageOverlaysBuilder = List<Widget> Function(
     BuildContext context, Rect pageRect, PdfPage page);
 
 /// Function to build loading banner.
@@ -393,10 +433,17 @@ typedef PdfViewerLoadingBannerBuilder = Widget Function(
 
 /// Function to build loading error banner.
 typedef PdfViewerErrorBannerBuilder = Widget Function(
-    BuildContext context, Object error, PdfDocumentRef documentRef);
+  BuildContext context,
+  Object error,
+  StackTrace? stackTrace,
+  PdfDocumentRef documentRef,
+);
 
 typedef PdfLinkWidgetBuilder = Widget? Function(
     BuildContext context, PdfLink link, Size size);
+
+typedef PdfViewerPagePaintCallback = void Function(
+    ui.Canvas canvas, Rect pageRect, PdfPage page);
 
 /// When [PdfViewerController.goToPage] is called, the page is aligned to the specified anchor.
 ///

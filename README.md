@@ -1,22 +1,40 @@
 # pdfrx
 
-[pdfrx](https://pub.dartlang.org/packages/pdfrx) is a PDF viewer implementation built on the top of [pdfium](https://pdfium.googlesource.com/pdfium/).
-The plugin currently supports Android, iOS, Windows, macOS, Linux, and Web.
+[pdfrx](https://pub.dartlang.org/packages/pdfrx) is a rich and fast PDF viewer implementation built on the top of [pdfium](https://pdfium.googlesource.com/pdfium/).
+The plugin supports Android, iOS, Windows, macOS, Linux, and Web.
 
-Please note that "Web" is not shown in [pub.dev](https://pub.dev/packages/pdfrx)'s platform list, but **IT DOES SUPPORT** Web.
+![pdfrx](https://github.com/espresso3389/pdfrx/assets/1311400/b076ac0b-e2cb-48f0-8772-9891537ade7b)
+
+## Main Features
+
+- [Zoomable and scrollable PDF document viewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-class.html)
+- [PDF Link Handling](#pdf-link-handling) support
+- [Document Outline (a.k.a Bookmarks)](#document-outline-aka-bookmarks) support
+- [Text Selection (still experimental)](#text-selection) support
+- [Text Search](#text-search) support
+- Flexibily customizable
+- Multi-platform support
+
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux (even on Raspberry PI)
+  - Web (\*using [PDF.js](https://mozilla.github.io/pdf.js/))
+
+- Three layers of APIs:
+  - Easy to use Flutter widgets
+    - [PdfViewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-class.html)
+    - [PdfDocumentViewBuilder](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocumentViewBuilder-class.html)
+    - [PdfPageView](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfPageView-class.html)
+  - Easy to use PDF APIs
+    - [PdfDocument](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument-class.html)
+  - pdfium bindings
+    - Not encouraged but you can import [package:pdfrx/src/pdfium/pdfium_bindings.dart](https://github.com/espresso3389/pdfrx/blob/master/lib/src/pdfium/pdfium_bindings.dart)
+
+## Demo site
 
 - A [demo site](https://espresso3389.github.io/pdfrx/) using Flutter Web
-
-![](https://private-user-images.githubusercontent.com/1311400/288040209-c4c44fde-2fb7-4e45-9261-5e33c0d1a0a9.gif?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MDE3ODAxNzIsIm5iZiI6MTcwMTc3OTg3MiwicGF0aCI6Ii8xMzExNDAwLzI4ODA0MDIwOS1jNGM0NGZkZS0yZmI3LTRlNDUtOTI2MS01ZTMzYzBkMWEwYTkuZ2lmP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9QUtJQUlXTkpZQVg0Q1NWRUg1M0ElMkYyMDIzMTIwNSUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyMzEyMDVUMTIzNzUyWiZYLUFtei1FeHBpcmVzPTMwMCZYLUFtei1TaWduYXR1cmU9ZTdlNmY1ODY5NWUwNjAzNzU3MWViZmU3ZDNkMGM4MTgxNWU4NmU3ZmU1NmRlNGZmYWZhNzZkNjQxNTQ5ZjdiZiZYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QmYWN0b3JfaWQ9MCZrZXlfaWQ9MCZyZXBvX2lkPTAifQ.hU9zW_HQycBEC9N4heOQG7x9qc6IhSzJBIu3_4mZ7nA)
-
-The plugin provides three different layers of APIs:
-
-- Easy to use Flutter widgets
-  - [PdfViewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-class.html)
-- Easy to use PDF APIs
-  - [PdfDocument](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument-class.html)
-- pdfium bindings
-  - Not encouraged but you can import `package:pdfrx/src/pdfium/pdfium_bindings.dart`
 
 ## Getting Started
 
@@ -44,7 +62,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdfrx: ^0.4.20
+  pdfrx: ^0.4.36
 ```
 
 ### Windows
@@ -56,31 +74,21 @@ dependencies:
 
 ### Web
 
-For Web, you should add the following `<script>` block to your `index.html` just before `<script src="main.dart.js"... </script>` to load [PDF.js](https://mozilla.github.io/pdf.js/):
+[pdf.js](https://mozilla.github.io/pdf.js/) is now automatically loaded and no modification to `index.html` is required.
 
-```html
-<!-- IMPORTANT: load pdfjs files -->
-<script
-  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"
-  type="text/javascript"
-></script>
-<script type="text/javascript">
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
-  pdfRenderOptions = {
-    // where cmaps are downloaded from
-    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
-    // The cmaps are compressed in the case
-    cMapPacked: true,
-    // any other options for pdfjsLib.getDocument.
-    // params: {}
-  };
-</script>
+It's not required but you can customize download URLs for pdf.js by setting [PdfJsConfiguration.configuration](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfJsConfiguration/configuration.html):
+
+```dart
+// place the code on main function or somewhere that is executed before the actual
+// app code.
+PdfJsConfiguration.configuration = const PdfJsConfiguration(
+  pdfJsSrc: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.mjs',
+  workerSrc: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+);
 ```
 
-Please check [example's code](example/web/index.html) for the actual usage.
-
-Please note that; with pdf.js 4.0 series, [they changed the way to load `pdfjsLib`](https://github.com/mozilla/pdf.js/issues/17228), it does not simply work with the current code. We need further investigation to support them.
+Please note that pdf.js 4.X is not supported yet and use 3.X versions.
 
 ## macOS
 
@@ -113,10 +121,6 @@ Anyway, the example code for the plugin illustrates how to download and preview 
 
 - [PdfViewer.asset](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.asset.html)
   - Open PDF of Flutter's asset
-- [PdfViewer.custom](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.custom.html)
-  - Open PDF using read callback
-- [PdfViewer.data](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.data.html)
-  - Open PDF on [Uint8List](https://api.dart.dev/dart-typed_data/Uint8List/Uint8List.html)
 - [PdfViewer.file](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.file.html)
   - Open PDF from file
 - [PdfViewer.uri](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.uri.html)
@@ -175,11 +179,67 @@ When [PdfViewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-clas
 
 ### `firstAttemptByEmptyPassword`
 
-By default, the first password attempt uses empty password. This is because cnrypted PDF files frequently uses empty password for viewing purpose. It's _normally_ useful but if you want to use authoring password, it can be disabled by setting `firstAttemptByEmptyPassword` to false.
+By default, the first password attempt uses empty password. This is because encrypted PDF files frequently use empty password for viewing purpose. It's _normally_ useful but if you want to use authoring password, it can be disabled by setting `firstAttemptByEmptyPassword` to false.
 
 ## Customizations
 
 You can customize the behaviour and visual by configuring [PdfViewerParams](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams-class.html).
+
+### Text Selection
+
+Text selection feature is still experimental but you can easily enable it like the following fragment:
+
+```dart
+PdfViewer.asset(
+  'assets/test.pdf',
+  enableTextSelection: true,
+  ...
+),
+```
+
+### PDF Link Handling
+
+To enable Link in PDF file, you should set [PdfViewerParams.linkWidgetBuilder](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/linkWidgetBuilder.html).
+
+The following fragment creates a widget that handles user's tap on link:
+
+```dart
+linkWidgetBuilder: (context, link, size) => Material(
+  color: Colors.transparent,
+  child: InkWell(
+    onTap: () {
+      // handle URL or Dest
+      if (link.url != null) {
+        // TODO: implement your own isSecureUrl by yourself...
+        if (await isSecureUrl(link.url!)) {
+          launchUrl(link.url!);
+        }
+      } else if (link.dest != null) {
+        controller.goToDest(link.dest);
+      }
+    },
+    hoverColor: Colors.blue.withOpacity(0.2),
+  ),
+),
+```
+
+For URIs, you should check the validity of the URIs before opening the URI; the example code just show dialog to ask whether to open the URL or not.
+
+For destinations, you can use [PdfViewerController.goToDest](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerController/goToDest.html) to go to the destination. Or you can use [PdfViewerController.calcMatrixForDest](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerController/calcMatrixForDest.html) to get the matrix for it.
+
+### Document Outline (a.k.a Bookmarks)
+
+PDF defines document outline ([PdfOutlineNode](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfOutlineNode-class.html)), which is sometimes called as bookmarks or index. And you can access it by [PdfDocument.loadOutline](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument/loadOutline.html).
+
+The following fragment obtains it on [PdfViewerParams.onViewerReady](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/onViewerReady.html):
+
+```dart
+onViewerReady: (document, controller) async {
+  outline.value = await document.loadOutline();
+},
+```
+
+[PdfOutlineNode](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfOutlineNode-class.html) is tree structured data and for more information, see the usage on [example code](https://github.com/espresso3389/pdfrx/blob/master/example/lib/outline_view.dart).
 
 ### Horizontal Scroll View
 
@@ -278,3 +338,130 @@ loadingBannerBuilder: (context, bytesDownloaded, totalBytes) {
   );
 }
 ```
+
+## Other Features
+
+### Text Search
+
+[TextSearcher](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher-class.html) is just a helper class that helps you to implement text searching feature on your app.
+
+The following fragment illustrates the overall structure of the [TextSearcher](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher-class.html):
+
+```dart
+class _MainPageState extends State<MainPage> {
+  final controller = PdfViewerController();
+  // create a PdfTextSearcher and add a listener to update the GUI on search result changes
+  late final textSearcher = PdfTextSearcher(controller)..addListener(_update);
+
+  void _update() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    // dispose the PdfTextSearcher
+    textSearcher.removeListener(_update);
+    textSearcher.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pdfrx example'),
+      ),
+      body: PdfViewer.asset(
+        'assets/hello.pdf',
+        controller: controller,
+        params: PdfViewerParams(
+          // add pageTextMatchPaintCallback that paints search hit highlights
+          pagePaintCallbacks: [
+            textSearcher.pageTextMatchPaintCallback
+          ],
+        ),
+      )
+    );
+  }
+  ...
+}
+```
+
+On the fragment above, it does:
+
+- Create [TextSearcher](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher-class.html) instance
+- Add a listener (Using [PdfTextSearcher.addListener](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/addListener.html)) to update UI on search result change
+- Add [TextSearcher.pageTextMatchPaintCallback](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/pageTextMatchPaintCallback.html) to [PdfViewerParams.pagePaintCallbacks](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams/pagePaintCallbacks.html) to show search matches
+
+Then, you can use [TextSearcher.startTextSearch](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/startTextSearch.html) to search text in the PDF document:
+
+```dart
+textSearcher.startTextSearch('hello', caseInsensitive: true);
+```
+
+The search starts running in background and the search progress is notified by the listener.
+
+There are several functions that helps you to navigate user to the search matches:
+
+- [TextSearcher.goToMatchOfIndex](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/goToMatchOfIndex.html) to go to the match of the specified index
+- [TextSearcher.goToNextMatch](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/goToNextMatch.html) to go to the next match
+- [TextSearcher.goToPrevMatch](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/goToPrevMatch.html) to go to the previous match
+
+You can get the search result (even during the search running) in the list of [PdfTextMatch](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextMatch-class.html) by [PdfTextSearcher.matches](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfTextSearcher/matches.html):
+
+```dart
+for (final match in textSearcher.matches) {
+  print(match.pageNumber);
+  ...
+}
+```
+
+You can also cancel the background search:
+
+```dart
+textSearcher.resetTextSearch();
+```
+
+### PdfDocumentViewBuilder/PdfPageView
+
+[PdfPageView](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfPageView-class.html) is just another PDF widget that shows only one page. It accepts [PdfDocument](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument-class.html) and page number to show a page within the document.
+
+[PdfDocumentViewBuilder](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocumentViewBuilder-class.html) is used to safely manage [PdfDocument](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument-class.html) inside widget tree and it accepts `builder` parameter that creates child widgets.
+
+The following fragment is a typical use of these widgets:
+
+```dart
+PdfDocumentViewBuilder.asset(
+  'asset/test.pdf',
+  builder: (context, document) => ListView.builder(
+    itemCount: document?.pages.length ?? 0,
+    itemBuilder: (context, index) {
+      return Container(
+        margin: const EdgeInsets.all(8),
+        height: 240,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 220,
+              child: PdfPageView(
+                document: document,
+                pageNumber: index + 1,
+                alignment: Alignment.center,
+              ),
+            ),
+            Text(
+              '${index + 1}',
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+),
+```
+
+## PdfDocument management and sharing it between widgets
+
+[PdfDocumentViewBuilder](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocumentViewBuilder-class.html) can accept [PdfDocumentRef](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocumentRef-class.html) from [PdfViewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-class.html) to safely share the same [PdfDocument](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfDocument-class.html) instance. For more information, see [example/lib/thumbnails_view.dart](example/lib/thumbnails_view.dart).

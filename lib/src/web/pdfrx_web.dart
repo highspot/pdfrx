@@ -100,6 +100,8 @@ class PdfDocumentFactoryImpl extends PdfDocumentFactory {
     PdfPasswordProvider? passwordProvider,
     bool firstAttemptByEmptyPassword = true,
     PdfDownloadProgressCallback? progressCallback,
+    PdfDownloadReportCallback? reportCallback,
+    bool preferRangeAccess = false,
   }) =>
       openFile(
         uri.toString(),
@@ -121,10 +123,13 @@ class PdfDocumentFactoryImpl extends PdfDocumentFactory {
       } else {
         password = await passwordProvider?.call();
         if (password == null) {
-          throw const PdfException('No password supplied by PasswordProvider.');
+          throw const PdfPasswordException(
+              'No password supplied by PasswordProvider.');
         }
       }
       try {
+        await ensurePdfjsInitialized();
+
         return PdfDocumentWeb.fromDocument(
           await openDocument(password),
           sourceName: sourceName,
@@ -201,7 +206,8 @@ class PdfDocumentWeb extends PdfDocument {
         pageNumber: pageNumber,
         page: page,
         width: vp1.width,
-        height: vp1.height);
+        height: vp1.height,
+        rotation: PdfPageRotation.values[page.rotate ~/ 90]);
   }
 
   @override
@@ -299,6 +305,7 @@ class PdfPageWeb extends PdfPage {
     required this.page,
     required this.width,
     required this.height,
+    required this.rotation,
   });
   @override
   final PdfDocumentWeb document;
@@ -309,6 +316,8 @@ class PdfPageWeb extends PdfPage {
   final double width;
   @override
   final double height;
+  @override
+  final PdfPageRotation rotation;
 
   @override
   Future<PdfImage?> render({
@@ -484,6 +493,8 @@ class PdfPageTextFragmentWeb implements PdfPageTextFragment {
   @override
   int get length => text.length;
   @override
+  int get end => index + length;
+  @override
   final PdfRect bounds;
   @override
   List<PdfRect>? get charRects => null;
@@ -493,9 +504,13 @@ class PdfPageTextFragmentWeb implements PdfPageTextFragment {
 
 class PdfPageTextWeb extends PdfPageText {
   PdfPageTextWeb({
+    required this.pageNumber,
     required this.fullText,
     required this.fragments,
   });
+
+  @override
+  final int pageNumber;
 
   @override
   final String fullText;
@@ -548,6 +563,9 @@ class PdfPageTextWeb extends PdfPageText {
       sb.write(str);
     }
 
-    return PdfPageTextWeb(fullText: sb.toString(), fragments: fragments);
+    return PdfPageTextWeb(
+        pageNumber: page.pageNumber,
+        fullText: sb.toString(),
+        fragments: fragments);
   }
 }

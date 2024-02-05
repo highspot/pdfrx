@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 import '../../pdfrx.dart';
 
@@ -25,6 +26,7 @@ class PdfPageTextOverlay extends StatefulWidget {
 
 class _PdfPageTextOverlayState extends State<PdfPageTextOverlay> {
   List<PdfPageTextFragment>? fragments;
+  SystemMouseCursor cursor = SystemMouseCursors.basic;
 
   @override
   void initState() {
@@ -80,21 +82,46 @@ class _PdfPageTextOverlayState extends State<PdfPageTextOverlay> {
         widget.page.document.permissions?.allowsCopying == false) {
       return const SizedBox();
     }
-    return Positioned(
-      left: widget.pageRect.left,
-      top: widget.pageRect.top,
-      width: widget.pageRect.width,
-      height: widget.pageRect.height,
-      child: MouseRegion(
-        hitTestBehavior: HitTestBehavior.translucent,
-        opaque: true,
-        cursor: SystemMouseCursors.text,
-        child: _PdfTextWidget(
-          widget.registrar,
-          this,
-        ),
+    return MouseRegion(
+      hitTestBehavior: HitTestBehavior.translucent,
+      cursor: cursor,
+      onHover: _onHover,
+      child: _PdfTextWidget(
+        widget.registrar,
+        this,
       ),
     );
+  }
+
+  void _onHover(PointerHoverEvent event) {
+    final point = toPdfPoint(event.localPosition, widget.page.height,
+        widget.pageRect.height / widget.page.height);
+    for (final fragment in fragments!) {
+      if (pdfRectContains(fragment.bounds, point)) {
+        _setCursor(SystemMouseCursors.text);
+        return;
+      }
+    }
+    _setCursor(SystemMouseCursors.basic);
+  }
+
+  void _setCursor(SystemMouseCursor cursor) {
+    if (this.cursor == cursor) return;
+    this.cursor = cursor;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  static Offset toPdfPoint(Offset point, double pageHeight, double scale) {
+    return Offset(point.dx / scale, pageHeight - point.dy / scale);
+  }
+
+  static bool pdfRectContains(PdfRect rect, Offset point) {
+    return rect.left <= point.dx &&
+        rect.right >= point.dx &&
+        rect.bottom <= point.dy &&
+        rect.top >= point.dy;
   }
 }
 
@@ -160,6 +187,9 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
   List<PdfPageTextFragment> get _fragments => _textWidget._state.fragments!;
 
   @override
+  List<Rect> get boundingBoxes => <Rect>[paintBounds];
+
+  @override
   bool get sizedByParent => true;
   @override
   double computeMinIntrinsicWidth(double height) => _pageRect.size.width;
@@ -209,7 +239,6 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
     final selectionRects = <Rect>[];
     final sb = StringBuffer();
     _selectedRect = null;
-    final scale = size.height / _page.height;
 
     int searchLineEnd(int start) {
       final lastIndex = _fragments.length - 1;
@@ -230,19 +259,13 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
         final fragment = _fragments[i];
         if (fragment.charRects == null) {
           yield (
-            rect: fragment.bounds.toRect(
-              height: _page.height,
-              scale: scale,
-            ),
+            rect: fragment.bounds.toRect(page: _page, scaledTo: size),
             text: fragment.text
           );
         } else {
           for (int j = 0; j < fragment.charRects!.length; j++) {
             yield (
-              rect: fragment.charRects![j].toRect(
-                height: _page.height,
-                scale: scale,
-              ),
+              rect: fragment.charRects![j].toRect(page: _page, scaledTo: size),
               text: fragment.text.substring(j, j + 1)
             );
           }
@@ -271,8 +294,7 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
     int? lastLineEnd;
     Rect? lastLineStartRect;
     for (int i = 0; i < _fragments.length;) {
-      final bounds =
-          _fragments[i].bounds.toRect(height: _page.height, scale: scale);
+      final bounds = _fragments[i].bounds.toRect(page: _page, scaledTo: size);
       if (lastLineEnd == null && selectionRect.intersect(bounds).isEmpty) {
         i++;
       } else {
@@ -343,8 +365,7 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
 
   void _selectFragment(Offset point) {
     for (final fragment in _fragments) {
-      final bounds = fragment.bounds
-          .toRect(height: _page.height, scale: size.height / _page.height);
+      final bounds = fragment.bounds.toRect(page: _page, scaledTo: size);
       if (bounds.contains(point)) {
         _start = bounds.topLeft;
         _end = bounds.bottomRight;

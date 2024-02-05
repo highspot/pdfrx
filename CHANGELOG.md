@@ -1,3 +1,79 @@
+# 0.4.36
+
+- Introduces PdfJsConfiguration to configure pdf.js download URLs
+
+# 0.4.35
+
+- Download cache mechanism update (#57/#58)
+
+# 0.4.34
+
+- Document update
+
+# 0.4.33
+
+- Document update
+
+# 0.4.32
+
+- Add PdfViewerParams.calculateInitialPageNumber to calculate the initial page number dynamically
+- Add PdfViewerParams.onViewerReady to know when the viewer gets ready
+
+# 0.4.31
+
+- Remove explicit CMake version spec 3.18.1
+
+# 0.4.30
+
+- FIXED: Link URI contains null-terminator
+- Add support text/links on rotated pages
+- Stability updates for PdfTextSearcher
+- README.md/example updates
+- Revival of PdfViewer.data/PdfViewer.custom
+
+# 0.4.29
+
+- Minor fixes to PdfTextSearcher
+
+# 0.4.28
+
+- README.md/example updates
+
+# 0.4.27
+
+- Minor updates and README.md updates
+
+# 0.4.26
+
+- Introduces PdfTextSearcher that helps you to implement search UI feature (#47)
+- Example code is vastly changed to explain more about the widget functions
+
+# 0.4.25
+
+- FIXED: Able to scroll outside document area
+
+# 0.4.24
+
+- Huge refactoring on PdfViewerController; it's no longer TransformationController but just a `ValueListenable<Matrix4>`
+  - This fixes an "Unhandled Exception: Null check operator used on a null value" on widget state disposal (#46)
+
+# 0.4.23
+
+- Introduces PdfDocumentViewBuilder/PdfPageView widgets
+- Example code is super updated with index and thumbnails.
+
+# 0.4.22
+
+- Web: Now pdf.js is loaded automatically and no modification to index.html is required!
+- Default implementation for PdfViewerParams.errorBannerBuilder to show internally thrown errors
+- PdfPasswordException is introduced to notify password error
+- PdfDocumentRef now has stackTrace for error
+- PdfFileCache now uses dedicated http.Client instance
+
+## 0.4.21
+
+- Now PdfDocumentRef has const constructor and PdfViewer.documentRef is also const
+
 ## 0.4.20
 
 - Removes PdfDocumentProvider (Actually PdfDocumentRef does everything)

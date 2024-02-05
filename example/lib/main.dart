@@ -1,6 +1,11 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:pdfrx_example/search_view.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'outline_view.dart';
+import 'password_dialog.dart';
+import 'thumbnails_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,312 +31,283 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  final searchTextFocusNode = FocusNode();
-  final searchTextController = TextEditingController();
+  final documentRef = ValueNotifier<PdfDocumentRef?>(null);
   final controller = PdfViewerController();
-  bool showSearchToolbar = false;
+  final showLeftPane = ValueNotifier<bool>(false);
   final outline = ValueNotifier<List<PdfOutlineNode>?>(null);
+  late final textSearcher = PdfTextSearcher(controller)..addListener(_update);
+
+  void _update() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   void dispose() {
+    textSearcher.removeListener(_update);
+    textSearcher.dispose();
+    showLeftPane.dispose();
     outline.dispose();
-    searchTextController.dispose();
-    searchTextFocusNode.dispose();
+    documentRef.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pdfrx example')),
-      body: Stack(
-        children: [
-          // PdfViewer.asset(
-          //   'assets/hello.pdf',
-          // PdfViewer.file(
-          //   r"D:\pdfrx\example\assets\hello.pdf",
-          // PdfViewer.uri(
-          //   Uri.parse(
-          //       'https://espresso3389.github.io/pdfrx/assets/assets/hello.pdf'),
-          PdfViewer.uri(
-            Uri.parse(kIsWeb
-                ? 'assets/assets/hello.pdf'
-                : 'https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf'),
-            // Set password provider to show password dialog
-            passwordProvider: _passwordDialog,
-            controller: controller,
-            params: PdfViewerParams(
-              enableTextSelection: true,
-              maxScale: 8,
-              // code to display pages horizontally
-              // layoutPages: (pages, params) {
-              //   final height = pages.fold(
-              //           templatePage.height,
-              //           (prev, page) => max(prev, page.height)) +
-              //       params.margin * 2;
-              //   final pageLayouts = <Rect>[];
-              //   double x = params.margin;
-              //   for (var page in pages) {
-              //     page ??= templatePage; // in case the page is not loaded yet
-              //     pageLayouts.add(
-              //       Rect.fromLTWH(
-              //         x,
-              //         (height - page.height) / 2, // center vertically
-              //         page.width,
-              //         page.height,
-              //       ),
-              //     );
-              //     x += page.width + params.margin;
-              //   }
-              //   return PdfPageLayout(
-              //     pageLayouts: pageLayouts,
-              //     documentSize: Size(x, height),
-              //   );
-              // },
-              //
-              // Scroll-thumbs example
-              //
-              viewerOverlayBuilder: (context, size) => [
-                // Show vertical scroll thumb on the right; it has page number on it
-                PdfViewerScrollThumb(
-                  controller: controller,
-                  orientation: ScrollbarOrientation.right,
-                  thumbSize: const Size(40, 25),
-                  thumbBuilder: (context, thumbSize, pageNumber, controller) =>
-                      Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Text(
-                        pageNumber.toString(),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ),
-                // Just a simple horizontal scroll thumb on the bottom
-                PdfViewerScrollThumb(
-                  controller: controller,
-                  orientation: ScrollbarOrientation.bottom,
-                  thumbSize: const Size(80, 30),
-                  thumbBuilder: (context, thumbSize, pageNumber, controller) =>
-                      Container(
-                    color: Colors.red,
-                  ),
-                ),
-              ],
-              //
-              // Loading progress indicator example
-              //
-              loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
-                  Center(
-                child: CircularProgressIndicator(
-                  value:
-                      totalBytes != null ? bytesDownloaded / totalBytes : null,
-                  backgroundColor: Colors.grey,
-                ),
-              ),
-              //
-              // Loading error
-              //
-              errorBannerBuilder: (context, error, documentRef) => Center(
-                child: Text(
-                  error.toString(),
-                ),
-              ),
-              //
-              // Link handling example
-              //
-              // FIXME: a link with several areas (link that contains line-break) does not correctly
-              // show the hover status
-              linkWidgetBuilder: (context, link, size) => Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    if (link.url != null) {
-                      print('Opening ${link.url}');
-                    } else if (link.dest != null) {
-                      controller.goToDest(link.dest);
-                    }
-                  },
-                  hoverColor: Colors.blue.withOpacity(0.2),
-                ),
-              ),
-              onDocumentChanged: _updateOutline,
-            ),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            showLeftPane.value = !showLeftPane.value;
+          },
+        ),
+        title: const Text('Pdfrx example'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.zoom_in),
+            onPressed: () => controller.zoomUp(),
           ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            right: 2,
-            top: showSearchToolbar ? 2 : -80,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 4,
-                      offset: Offset(2, 2))
-                ],
-              ),
-              padding: const EdgeInsets.all(8),
-              width: 300,
-              height: 60,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: searchTextController,
-                      focusNode: searchTextFocusNode,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.arrow_downward),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.arrow_upward),
-                  ),
-                ],
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.zoom_out),
+            onPressed: () => controller.zoomDown(),
           ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: () {
-              controller.zoomUp();
-            },
-            child: const Icon(Icons.add),
-          ),
-          FloatingActionButton(
-            onPressed: () {
-              controller.zoomDown();
-            },
-            child: const Icon(Icons.remove),
-          ),
-          FloatingActionButton(
-            child: const Icon(Icons.first_page),
+          IconButton(
+            icon: const Icon(Icons.first_page),
             onPressed: () => controller.goToPage(pageNumber: 1),
           ),
-          FloatingActionButton(
-            child: const Icon(Icons.last_page),
+          IconButton(
+            icon: const Icon(Icons.last_page),
             onPressed: () =>
                 controller.goToPage(pageNumber: controller.pages.length),
           ),
-          FloatingActionButton(
-              child: const Icon(Icons.search),
-              onPressed: () =>
-                  setState(() => showSearchToolbar = !showSearchToolbar))
         ],
       ),
-      //
-      // Document outline
-      //
-      drawer: Drawer(
-        child: ValueListenableBuilder<List<PdfOutlineNode>?>(
-          valueListenable: outline,
-          builder: (context, outline, child) => Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: PdfOutline(
-              outline: outline,
-              controller: controller,
+      body: Row(
+        children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            child: ValueListenableBuilder(
+              valueListenable: showLeftPane,
+              builder: (context, showLeftPane, child) => SizedBox(
+                width: showLeftPane ? 300 : 0,
+                child: child!,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(1, 0, 4, 0),
+                child: DefaultTabController(
+                  length: 3,
+                  child: Column(
+                    children: [
+                      const TabBar(tabs: [
+                        Tab(text: 'Search'),
+                        Tab(text: 'Outline'),
+                        Tab(text: 'Thumbnails'),
+                      ]),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            // NOTE: documentRef is not explicitly used but it indicates that
+                            // the document is changed.
+                            ValueListenableBuilder(
+                              valueListenable: documentRef,
+                              builder: (context, documentRef, child) => child!,
+                              child: TextSearchView(textSearcher: textSearcher),
+                            ),
+                            ValueListenableBuilder(
+                              valueListenable: outline,
+                              builder: (context, outline, child) => OutlineView(
+                                outline: outline,
+                                controller: controller,
+                              ),
+                            ),
+                            ValueListenableBuilder(
+                              valueListenable: documentRef,
+                              builder: (context, documentRef, child) => child!,
+                              child: ThumbnailsView(controller: controller),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          Expanded(
+            child: Stack(
+              children: [
+                PdfViewer.asset(
+                  'assets/hello.pdf',
+                  // PdfViewer.file(
+                  //   r"D:\pdfrx\example\assets\hello.pdf",
+                  // PdfViewer.uri(
+                  //   Uri.parse(
+                  //       'https://espresso3389.github.io/pdfrx/assets/assets/PDF32000_2008.pdf'),
+                  // PdfViewer.uri(
+                  //   Uri.parse(kIsWeb
+                  //       ? 'assets/assets/hello.pdf'
+                  //       : 'https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf'),
+                  // Set password provider to show password dialog
+                  passwordProvider: () => passwordDialog(context),
+                  controller: controller,
+                  params: PdfViewerParams(
+                    enableTextSelection: true,
+                    maxScale: 8,
+                    // code to display pages horizontally
+                    // layoutPages: (pages, params) {
+                    //   final height = pages.fold(
+                    //           templatePage.height,
+                    //           (prev, page) => max(prev, page.height)) +
+                    //       params.margin * 2;
+                    //   final pageLayouts = <Rect>[];
+                    //   double x = params.margin;
+                    //   for (var page in pages) {
+                    //     page ??= templatePage; // in case the page is not loaded yet
+                    //     pageLayouts.add(
+                    //       Rect.fromLTWH(
+                    //         x,
+                    //         (height - page.height) / 2, // center vertically
+                    //         page.width,
+                    //         page.height,
+                    //       ),
+                    //     );
+                    //     x += page.width + params.margin;
+                    //   }
+                    //   return PdfPageLayout(
+                    //     pageLayouts: pageLayouts,
+                    //     documentSize: Size(x, height),
+                    //   );
+                    // },
+                    //
+                    // Scroll-thumbs example
+                    //
+                    viewerOverlayBuilder: (context, size) => [
+                      // Show vertical scroll thumb on the right; it has page number on it
+                      PdfViewerScrollThumb(
+                        controller: controller,
+                        orientation: ScrollbarOrientation.right,
+                        thumbSize: const Size(40, 25),
+                        thumbBuilder:
+                            (context, thumbSize, pageNumber, controller) =>
+                                Container(
+                          color: Colors.black,
+                          child: Center(
+                            child: Text(
+                              pageNumber.toString(),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Just a simple horizontal scroll thumb on the bottom
+                      PdfViewerScrollThumb(
+                        controller: controller,
+                        orientation: ScrollbarOrientation.bottom,
+                        thumbSize: const Size(80, 30),
+                        thumbBuilder:
+                            (context, thumbSize, pageNumber, controller) =>
+                                Container(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                    //
+                    // Loading progress indicator example
+                    //
+                    loadingBannerBuilder:
+                        (context, bytesDownloaded, totalBytes) => Center(
+                      child: CircularProgressIndicator(
+                        value: totalBytes != null
+                            ? bytesDownloaded / totalBytes
+                            : null,
+                        backgroundColor: Colors.grey,
+                      ),
+                    ),
+                    //
+                    // Link handling example
+                    //
+                    // FIXME: a link with several areas (link that contains line-break) does not correctly
+                    // show the hover status
+                    linkWidgetBuilder: (context, link, size) => Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () async {
+                          if (link.url != null) {
+                            navigateToUrl(link.url!);
+                          } else if (link.dest != null) {
+                            controller.goToDest(link.dest);
+                          }
+                        },
+                        hoverColor: Colors.blue.withOpacity(0.2),
+                      ),
+                    ),
+                    pagePaintCallbacks: [
+                      textSearcher.pageTextMatchPaintCallback
+                    ],
+                    onDocumentChanged: (document) async {
+                      if (document == null) {
+                        documentRef.value = null;
+                        outline.value = null;
+                      }
+                    },
+                    onViewerReady: (document, controller) async {
+                      documentRef.value = controller.documentRef;
+                      outline.value = await document.loadOutline();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  //
-  // Simple password dialog
-  //
-  Future<String?> _passwordDialog() async {
-    final textController = TextEditingController();
-    return await showDialog<String?>(
+  Future<void> navigateToUrl(Uri url) async {
+    if (await shouldOpenUrl(context, url)) {
+      await launchUrl(url);
+    }
+  }
+
+  Future<bool> shouldOpenUrl(BuildContext context, Uri url) async {
+    final result = await showDialog<bool?>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Enter password'),
-          content: TextField(
-            controller: textController,
-            autofocus: true,
-            keyboardType: TextInputType.visiblePassword,
-            obscureText: true,
-            onSubmitted: (value) => Navigator.of(context).pop(value),
+          title: const Text('Navigate to URL?'),
+          content: SelectionArea(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(
+                      text:
+                          'Do you want to navigate to the following location?\n'),
+                  TextSpan(
+                    text: url.toString(),
+                    style: const TextStyle(color: Colors.blue),
+                  ),
+                ],
+              ),
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
+              onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(textController.text),
-              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Go'),
             ),
           ],
         );
       },
     );
-  }
-
-  Future<void> _updateOutline(PdfDocument? document) async {
-    outline.value = await document?.loadOutline();
-  }
-}
-
-//
-// Just a rough implementation of the document index
-//
-class PdfOutline extends StatelessWidget {
-  const PdfOutline({
-    super.key,
-    required this.outline,
-    required this.controller,
-  });
-
-  final List<PdfOutlineNode>? outline;
-  final PdfViewerController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final list = _getOutlineList(outline, 0).toList();
-    return SizedBox(
-      width: list.isEmpty ? 0 : 200,
-      child: ListView.builder(
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          final item = list[index];
-          return InkWell(
-            onTap: () => controller.goToDest(item.node.dest),
-            child: Container(
-              margin: EdgeInsets.only(
-                left: item.level * 16.0 + 8,
-                top: 8,
-                bottom: 8,
-              ),
-              child: Text(
-                item.node.title,
-                softWrap: false,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Iterable<({PdfOutlineNode node, int level})> _getOutlineList(
-      List<PdfOutlineNode>? outline, int level) sync* {
-    if (outline == null) return;
-    for (var node in outline) {
-      yield (node: node, level: level);
-      yield* _getOutlineList(node.children, level + 1);
-    }
+    return result ?? false;
   }
 }
