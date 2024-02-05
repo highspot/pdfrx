@@ -29,6 +29,9 @@ android {
         namespace 'jp.espresso3389.pdfrx'
     }
 
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libpdfium.so'
+    }
     // Bumping the plugin compileSdkVersion requires all clients of this plugin
     // to bump the version in their app.
     compileSdkVersion 33
