@@ -30,7 +30,7 @@ android {
     }
 
     packagingOptions {
-        pickFirst 'lib/arm64-v8a/libpdfium.so'
+        pickFirst '**/libpdfium.so'
     }
     // Bumping the plugin compileSdkVersion requires all clients of this plugin
     // to bump the version in their app.
