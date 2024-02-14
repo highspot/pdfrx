@@ -79,8 +79,7 @@ class _MainPageState extends State<MainPage> {
           ),
           IconButton(
             icon: const Icon(Icons.last_page),
-            onPressed: () =>
-                controller.goToPage(pageNumber: controller.pages.length),
+            onPressed: () => controller.goToPage(pageNumber: controller.pages.length),
           ),
         ],
       ),
@@ -140,7 +139,7 @@ class _MainPageState extends State<MainPage> {
             child: Stack(
               children: [
                 PdfViewer.asset(
-                  'assets/hello.pdf',
+                  'assets/demo.pdf',
                   // PdfViewer.file(
                   //   r"D:\pdfrx\example\assets\hello.pdf",
                   // PdfViewer.uri(
@@ -153,9 +152,15 @@ class _MainPageState extends State<MainPage> {
                   // Set password provider to show password dialog
                   passwordProvider: () => passwordDialog(context),
                   controller: controller,
+
                   params: PdfViewerParams(
+                    scaleEnabled: true,
+                    // pageAnchor: PdfPageAnchor.top,
                     enableTextSelection: true,
                     maxScale: 8,
+                    // boundaryMargin: EdgeInsets.only(top: 90, bottom: 90),
+                    panEnabled: true,
+                    panAxis: PanAxis.free,
                     // code to display pages horizontally
                     // layoutPages: (pages, params) {
                     //   final height = pages.fold(
@@ -190,9 +195,7 @@ class _MainPageState extends State<MainPage> {
                         controller: controller,
                         orientation: ScrollbarOrientation.right,
                         thumbSize: const Size(40, 25),
-                        thumbBuilder:
-                            (context, thumbSize, pageNumber, controller) =>
-                                Container(
+                        thumbBuilder: (context, thumbSize, pageNumber, controller) => Container(
                           color: Colors.black,
                           child: Center(
                             child: Text(
@@ -207,9 +210,7 @@ class _MainPageState extends State<MainPage> {
                         controller: controller,
                         orientation: ScrollbarOrientation.bottom,
                         thumbSize: const Size(80, 30),
-                        thumbBuilder:
-                            (context, thumbSize, pageNumber, controller) =>
-                                Container(
+                        thumbBuilder: (context, thumbSize, pageNumber, controller) => Container(
                           color: Colors.red,
                         ),
                       ),
@@ -217,12 +218,9 @@ class _MainPageState extends State<MainPage> {
                     //
                     // Loading progress indicator example
                     //
-                    loadingBannerBuilder:
-                        (context, bytesDownloaded, totalBytes) => Center(
+                    loadingBannerBuilder: (context, bytesDownloaded, totalBytes) => Center(
                       child: CircularProgressIndicator(
-                        value: totalBytes != null
-                            ? bytesDownloaded / totalBytes
-                            : null,
+                        value: totalBytes != null ? bytesDownloaded / totalBytes : null,
                         backgroundColor: Colors.grey,
                       ),
                     ),
@@ -244,9 +242,7 @@ class _MainPageState extends State<MainPage> {
                         hoverColor: Colors.blue.withOpacity(0.2),
                       ),
                     ),
-                    pagePaintCallbacks: [
-                      textSearcher.pageTextMatchPaintCallback
-                    ],
+                    pagePaintCallbacks: [textSearcher.pageTextMatchPaintCallback],
                     onDocumentChanged: (document) async {
                       if (document == null) {
                         documentRef.value = null;
@@ -284,9 +280,7 @@ class _MainPageState extends State<MainPage> {
             child: Text.rich(
               TextSpan(
                 children: [
-                  const TextSpan(
-                      text:
-                          'Do you want to navigate to the following location?\n'),
+                  const TextSpan(text: 'Do you want to navigate to the following location?\n'),
                   TextSpan(
                     text: url.toString(),
                     style: const TextStyle(color: Colors.blue),
