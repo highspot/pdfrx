@@ -919,7 +919,7 @@ class _InteractiveViewerState extends State<InteractiveViewer>
         curve: Curves.decelerate,
       ));
       _controller.duration = Duration(milliseconds: (tFinal * 1000).round());
-      _animation!.addListener(_onAnimate);
+      // _animation!.addListener(_onAnimate);
       _controller.forward();
     } else if (_gestureType == _GestureType.scale) {
       if (details.scaleVelocity.abs() < 0.1) {
@@ -940,7 +940,7 @@ class _InteractiveViewerState extends State<InteractiveViewer>
                   parent: _scaleController, curve: Curves.decelerate));
       _scaleController.duration =
           Duration(milliseconds: (tFinal * 1000).round());
-      _scaleAnimation!.addListener(_onScaleAnimate);
+      // _scaleAnimation!.addListener(_onScaleAnimate);
       _scaleController.forward();
     }
   }
