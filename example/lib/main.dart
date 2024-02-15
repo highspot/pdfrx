@@ -140,6 +140,7 @@ class _MainPageState extends State<MainPage> {
               children: [
                 PdfViewer.asset(
                   'assets/hello.pdf',
+
                   // PdfViewer.file(
                   //   r"D:\pdfrx\example\assets\hello.pdf",
                   // PdfViewer.uri(
