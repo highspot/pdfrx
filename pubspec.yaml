@@ -5,7 +5,7 @@ homepage: https://github.com/espresso3389/pdfrx
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
-  flutter: '>=3.16.8'
+  flutter: '>=3.19.0'
 
 dependencies:
   collection: ^1.18.0
