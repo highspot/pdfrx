@@ -1,3 +1,19 @@
+# 1.0.49
+
+- iOS minimum deployment target 12.0
+
+# 1.0.11
+
+- intl 0.18.1 (#87)
+
+# 1.0.10+1
+
+- Add note for Flutter 3.19/Dart 3.3 support on 1.0.0+
+
+# 1.0.10
+
+- FIXED: calcZoomStopTable hangs app if zoom ratio is almost 0 (#79)
+
 # 1.0.9
 
 - PdfRect.toRect: scaledTo -> scaledPageSize
