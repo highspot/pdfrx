@@ -14,7 +14,7 @@ class PdfViewerParams {
     this.margin = 8.0,
     this.backgroundColor = Colors.grey,
     this.layoutPages,
-    this.maxScale = 2.5,
+    this.maxScale = 8.0,
     this.minScale = 0.1,
     this.useAlternativeFitScaleAsMinScale = true,
     this.panAxis = PanAxis.free,
@@ -22,6 +22,8 @@ class PdfViewerParams {
     this.annotationRenderingMode =
         PdfAnnotationRenderingMode.annotationAndForms,
     this.pageAnchor = PdfPageAnchor.topCenter,
+    this.pageAnchorEnd = PdfPageAnchor.bottomCenter,
+    this.onePassRenderingScaleThreshold = 200 / 72,
     this.enableTextSelection = false,
     this.panEnabled = true,
     this.scaleEnabled = true,
@@ -46,6 +48,7 @@ class PdfViewerParams {
     this.linkWidgetBuilder,
     this.pagePaintCallbacks,
     this.onTextSelectionChange,
+    this.perPageSelectionAreaInjector,
     this.forceReload = false,
   });
 
@@ -87,7 +90,7 @@ class PdfViewerParams {
 
   /// The maximum allowed scale.
   ///
-  /// The default is 2.5.
+  /// The default is 8.0.
   final double maxScale;
 
   /// The minimum allowed scale.
@@ -118,6 +121,20 @@ class PdfViewerParams {
 
   /// Anchor to position the page.
   final PdfPageAnchor pageAnchor;
+
+  /// Anchor to position the page at the end of the page.
+  final PdfPageAnchor pageAnchorEnd;
+
+  /// If a page is rendered over the scale threshold, the page is rendered with the threshold scale
+  /// and actual resolution image is rendered after some delay (progressive rendering).
+  ///
+  /// Basically, if the value is larger, the viewer renders each page in one-pass rendering; it is
+  /// faster and looks better to the user. However, larger value may consume more memory.
+  /// So you may want to set the smaller value to reduce memory consumption.
+  ///
+  /// The default is 200 / 72, which implies rendering at 300 dpi.
+  /// If you want more granular control for each page, use [getPageRenderingScale].
+  final double onePassRenderingScaleThreshold;
 
   /// Experimental: Enable text selection on pages.
   ///
@@ -159,10 +176,11 @@ class PdfViewerParams {
 
   /// Function to customize the rendering scale of the page.
   ///
-  /// In some cases, if [maxScale] is too large, certain pages may not be
-  /// rendered correctly due to memory limitation, or anyway they may take too
-  /// long to render. In such cases, you can use this function to customize the
-  /// rendering scales for such pages.
+  /// In some cases, if [maxScale]/[onePassRenderingScaleThreshold] is too large,
+  /// certain pages may not be rendered correctly due to memory limitation,
+  /// or anyway they may take too long to render.
+  /// In such cases, you can use this function to customize the rendering scales
+  /// for such pages.
   ///
   /// The following fragment is an example of rendering pages always on 300 dpi:
   /// ```dart
@@ -282,6 +300,28 @@ class PdfViewerParams {
   /// Function to be notified when the text selection is changed.
   final PdfViewerTextSelectionChangeCallback? onTextSelectionChange;
 
+  /// Function to inject customized [SelectionArea] for page text selection.
+  ///
+  /// You can of course disable page level [SelectionArea] by returning the passed `child` directly.
+  ///
+  /// The following fragment is an example to inject [SelectionArea] with
+  /// [AdaptiveTextSelectionToolbar.selectableRegion] for page text selection:
+  ///
+  /// ```dart
+  /// perPageSelectionAreaInjector: (page, child) {
+  ///   return SelectionArea(
+  ///     contextMenuBuilder: (context, selectableRegionState) {
+  ///       return AdaptiveTextSelectionToolbar.selectableRegion(
+  ///          selectableRegionState: selectableRegionState,
+  ///       );
+  ///     },
+  ///     child: child,
+  ///   );
+  /// },
+  /// ```
+  ///
+  final PerPageSelectionAreaInjector? perPageSelectionAreaInjector;
+
   /// Force reload the viewer.
   ///
   /// Normally whether to reload the viewer is determined by the changes of the parameters but
@@ -306,6 +346,9 @@ class PdfViewerParams {
         other.boundaryMargin != boundaryMargin ||
         other.annotationRenderingMode != annotationRenderingMode ||
         other.pageAnchor != pageAnchor ||
+        other.pageAnchorEnd != pageAnchorEnd ||
+        other.onePassRenderingScaleThreshold !=
+            onePassRenderingScaleThreshold ||
         other.enableTextSelection != enableTextSelection ||
         other.panEnabled != panEnabled ||
         other.scaleEnabled != scaleEnabled ||
@@ -330,6 +373,9 @@ class PdfViewerParams {
         other.boundaryMargin == boundaryMargin &&
         other.annotationRenderingMode == annotationRenderingMode &&
         other.pageAnchor == pageAnchor &&
+        other.pageAnchorEnd == pageAnchorEnd &&
+        other.onePassRenderingScaleThreshold ==
+            onePassRenderingScaleThreshold &&
         other.enableTextSelection == enableTextSelection &&
         other.panEnabled == panEnabled &&
         other.scaleEnabled == scaleEnabled &&
@@ -353,6 +399,7 @@ class PdfViewerParams {
         other.linkWidgetBuilder == linkWidgetBuilder &&
         other.pagePaintCallbacks == pagePaintCallbacks &&
         other.onTextSelectionChange == onTextSelectionChange &&
+        other.perPageSelectionAreaInjector == perPageSelectionAreaInjector &&
         other.forceReload == forceReload;
   }
 
@@ -367,6 +414,8 @@ class PdfViewerParams {
         boundaryMargin.hashCode ^
         annotationRenderingMode.hashCode ^
         pageAnchor.hashCode ^
+        pageAnchorEnd.hashCode ^
+        onePassRenderingScaleThreshold.hashCode ^
         enableTextSelection.hashCode ^
         panEnabled.hashCode ^
         scaleEnabled.hashCode ^
@@ -390,6 +439,7 @@ class PdfViewerParams {
         linkWidgetBuilder.hashCode ^
         pagePaintCallbacks.hashCode ^
         onTextSelectionChange.hashCode ^
+        perPageSelectionAreaInjector.hashCode ^
         forceReload.hashCode;
   }
 }
@@ -497,6 +547,13 @@ typedef PdfViewerPagePaintCallback = void Function(
 /// Otherwise, [selection] is the selected text ranges. If no selection is made, [selection] is an empty list.
 typedef PdfViewerTextSelectionChangeCallback = void Function(
     PdfTextRanges? selection);
+
+/// Function to inject customized [SelectionArea] for page text selection.
+///
+/// [page] is the page to inject the selection area.
+/// [child] is the child widget to apply the selection area.
+typedef PerPageSelectionAreaInjector = Widget Function(
+    PdfPage page, Widget child);
 
 /// When [PdfViewerController.goToPage] is called, the page is aligned to the specified anchor.
 ///
