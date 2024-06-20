@@ -21,15 +21,24 @@ class PdfViewerParams {
     this.boundaryMargin,
     this.annotationRenderingMode =
         PdfAnnotationRenderingMode.annotationAndForms,
-    this.pageAnchor = PdfPageAnchor.topCenter,
-    this.pageAnchorEnd = PdfPageAnchor.bottomCenter,
+    this.pageAnchor = PdfPageAnchor.top,
+    this.pageAnchorEnd = PdfPageAnchor.bottom,
     this.onePassRenderingScaleThreshold = 200 / 72,
     this.enableTextSelection = false,
+    this.matchTextColor,
+    this.activeMatchTextColor,
+    this.pageDropShadow = const BoxShadow(
+      color: Colors.black54,
+      blurRadius: 4,
+      spreadRadius: 2,
+      offset: Offset(2, 2),
+    ),
     this.panEnabled = true,
     this.scaleEnabled = true,
     this.onInteractionEnd,
     this.onInteractionStart,
     this.onInteractionUpdate,
+    this.interactionEndFrictionCoefficient = _kDrag,
     this.onDocumentChanged,
     this.calculateInitialPageNumber,
     this.calculateCurrentPageNumber,
@@ -48,6 +57,7 @@ class PdfViewerParams {
     this.errorBannerBuilder,
     this.linkWidgetBuilder,
     this.pagePaintCallbacks,
+    this.pageBackgroundPaintCallbacks,
     this.onTextSelectionChange,
     this.perPageSelectionAreaInjector,
     this.forceReload = false,
@@ -141,6 +151,31 @@ class PdfViewerParams {
   ///
   final bool enableTextSelection;
 
+  /// Color for text search match.
+  ///
+  /// If null, the default color is `Colors.yellow.withOpacity(0.5)`.
+  final Color? matchTextColor;
+
+  /// Color for active text search match.
+  ///
+  /// If null, the default color is `Colors.orange.withOpacity(0.5)`.
+  final Color? activeMatchTextColor;
+
+  /// Drop shadow for the page.
+  ///
+  /// The default is:
+  /// ```dart
+  /// BoxShadow(
+  ///   color: Colors.black54,
+  ///   blurRadius: 4,
+  ///   spreadRadius: 0,
+  ///   offset: Offset(2, 2))
+  /// ```
+  ///
+  /// If you need to remove the shadow, set this to null.
+  /// To customize more of the shadow, you can use [pageBackgroundPaintCallbacks] to paint the shadow manually.
+  final BoxShadow? pageDropShadow;
+
   /// See [InteractiveViewer.panEnabled] for details.
   final bool panEnabled;
 
@@ -155,6 +190,13 @@ class PdfViewerParams {
 
   /// See [InteractiveViewer.onInteractionUpdate] for details.
   final GestureScaleUpdateCallback? onInteractionUpdate;
+
+  /// See [InteractiveViewer.interactionEndFrictionCoefficient] for details.
+  final double interactionEndFrictionCoefficient;
+
+  // Used as the coefficient of friction in the inertial translation animation.
+  // This value was eyeballed to give a feel similar to Google Photos.
+  static const double _kDrag = 0.0000135;
 
   /// Function to notify that the document is loaded/changed.
   ///
@@ -298,10 +340,16 @@ class PdfViewerParams {
   /// Build link widget.
   final PdfLinkWidgetBuilder? linkWidgetBuilder;
 
-  /// Page paint callbacks.
+  /// Callback to paint over the rendered page.
   ///
   /// For the detail usage, see [PdfViewerPagePaintCallback].
   final List<PdfViewerPagePaintCallback>? pagePaintCallbacks;
+
+  /// Callback to paint on the background of the rendered page (called before painting the page content).
+  ///
+  /// It is useful to paint some background such as drop shadow of the page.
+  /// For the detail usage, see [PdfViewerPagePaintCallback].
+  final List<PdfViewerPagePaintCallback>? pageBackgroundPaintCallbacks;
 
   /// Function to be notified when the text selection is changed.
   final PdfViewerTextSelectionChangeCallback? onTextSelectionChange;
@@ -356,8 +404,13 @@ class PdfViewerParams {
         other.onePassRenderingScaleThreshold !=
             onePassRenderingScaleThreshold ||
         other.enableTextSelection != enableTextSelection ||
+        other.matchTextColor != matchTextColor ||
+        other.activeMatchTextColor != activeMatchTextColor ||
+        other.pageDropShadow != pageDropShadow ||
         other.panEnabled != panEnabled ||
         other.scaleEnabled != scaleEnabled ||
+        other.interactionEndFrictionCoefficient !=
+            interactionEndFrictionCoefficient ||
         other.scrollByMouseWheel != scrollByMouseWheel ||
         other.enableKeyboardNavigation != enableKeyboardNavigation ||
         other.scrollByArrowKey != scrollByArrowKey ||
@@ -383,11 +436,16 @@ class PdfViewerParams {
         other.onePassRenderingScaleThreshold ==
             onePassRenderingScaleThreshold &&
         other.enableTextSelection == enableTextSelection &&
+        other.matchTextColor == matchTextColor &&
+        other.activeMatchTextColor == activeMatchTextColor &&
+        other.pageDropShadow == pageDropShadow &&
         other.panEnabled == panEnabled &&
         other.scaleEnabled == scaleEnabled &&
         other.onInteractionEnd == onInteractionEnd &&
         other.onInteractionStart == onInteractionStart &&
         other.onInteractionUpdate == onInteractionUpdate &&
+        other.interactionEndFrictionCoefficient ==
+            interactionEndFrictionCoefficient &&
         other.onDocumentChanged == onDocumentChanged &&
         other.calculateInitialPageNumber == calculateInitialPageNumber &&
         other.calculateCurrentPageNumber == calculateCurrentPageNumber &&
@@ -405,6 +463,7 @@ class PdfViewerParams {
         other.errorBannerBuilder == errorBannerBuilder &&
         other.linkWidgetBuilder == linkWidgetBuilder &&
         other.pagePaintCallbacks == pagePaintCallbacks &&
+        other.pageBackgroundPaintCallbacks == pageBackgroundPaintCallbacks &&
         other.onTextSelectionChange == onTextSelectionChange &&
         other.perPageSelectionAreaInjector == perPageSelectionAreaInjector &&
         other.forceReload == forceReload;
@@ -424,11 +483,15 @@ class PdfViewerParams {
         pageAnchorEnd.hashCode ^
         onePassRenderingScaleThreshold.hashCode ^
         enableTextSelection.hashCode ^
+        matchTextColor.hashCode ^
+        activeMatchTextColor.hashCode ^
+        pageDropShadow.hashCode ^
         panEnabled.hashCode ^
         scaleEnabled.hashCode ^
         onInteractionEnd.hashCode ^
         onInteractionStart.hashCode ^
         onInteractionUpdate.hashCode ^
+        interactionEndFrictionCoefficient.hashCode ^
         onDocumentChanged.hashCode ^
         calculateInitialPageNumber.hashCode ^
         calculateCurrentPageNumber.hashCode ^
@@ -446,6 +509,7 @@ class PdfViewerParams {
         errorBannerBuilder.hashCode ^
         linkWidgetBuilder.hashCode ^
         pagePaintCallbacks.hashCode ^
+        pageBackgroundPaintCallbacks.hashCode ^
         onTextSelectionChange.hashCode ^
         perPageSelectionAreaInjector.hashCode ^
         forceReload.hashCode;
@@ -576,11 +640,15 @@ typedef PerPageSelectionAreaInjector = Widget Function(
 /// And the anchor determines which part of the page should be shown in the viewer when [PdfViewerController.goToPage]
 /// is called.
 ///
-/// If you prefer to show the top of the page, [PdfPageAnchor.topCenter] will do that.
+/// If you prefer to show the top of the page, [PdfPageAnchor.top] will do that.
 ///
 /// If you prefer to show whole the page even if the page will be zoomed down to fit into the viewer,
 /// [PdfPageAnchor.all] will do that.
 enum PdfPageAnchor {
+  top,
+  left,
+  right,
+  bottom,
   topLeft,
   topCenter,
   topRight,

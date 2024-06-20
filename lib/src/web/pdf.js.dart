@@ -31,22 +31,32 @@ bool get _isPdfjsLoaded => globalContext['pdfjsLib'] != null;
 
 @JS('pdfjsLib.getDocument')
 external _PDFDocumentLoadingTask _pdfjsGetDocument(
-    _PdfjsGetDocumentParams data);
+    _PdfjsDocumentInitParameters data);
 
-extension type _PdfjsGetDocumentParams._(JSObject _) implements JSObject {
-  external _PdfjsGetDocumentParams({
+extension type _PdfjsDocumentInitParameters._(JSObject _) implements JSObject {
+  external _PdfjsDocumentInitParameters({
     String? url,
     JSArrayBuffer? data,
+    JSAny? httpHeaders,
+    bool? withCredentials,
     String? password,
+    int? length,
     String? cMapUrl,
     bool? cMapPacked,
+    bool? useSystemFonts,
+    String? standardFontDataUrl,
   });
 
   external String? get url;
   external JSArrayBuffer? get data;
+  external JSAny? get httpHeaders;
+  external bool? get withCredentials;
   external String? get password;
+  external int? get length;
   external String? get cMapUrl;
   external bool? get cMapPacked;
+  external bool? get useSystemFonts;
+  external String? get standardFontDataUrl;
 }
 
 @JS('pdfjsLib.GlobalWorkerOptions.workerSrc')
@@ -56,24 +66,37 @@ extension type _PDFDocumentLoadingTask(JSObject _) implements JSObject {
   external JSPromise<PdfjsDocument> get promise;
 }
 
-Future<PdfjsDocument> pdfjsGetDocument(String url, {String? password}) =>
+Future<PdfjsDocument> pdfjsGetDocument(
+  String url, {
+  String? password,
+  Map<String, String>? headers,
+  bool withCredentials = false,
+}) =>
     _pdfjsGetDocument(
-      _PdfjsGetDocumentParams(
+      _PdfjsDocumentInitParameters(
         url: url,
         password: password,
+        httpHeaders: headers?.jsify(),
+        withCredentials: withCredentials,
         cMapUrl: PdfJsConfiguration.configuration?.cMapUrl ?? _pdfjsCMapUrl,
         cMapPacked: PdfJsConfiguration.configuration?.cMapPacked ?? true,
+        useSystemFonts: PdfJsConfiguration.configuration?.useSystemFonts,
+        standardFontDataUrl:
+            PdfJsConfiguration.configuration?.standardFontDataUrl,
       ),
     ).promise.toDart;
 
 Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data,
         {String? password}) =>
     _pdfjsGetDocument(
-      _PdfjsGetDocumentParams(
+      _PdfjsDocumentInitParameters(
         data: data.toJS,
         password: password,
         cMapUrl: PdfJsConfiguration.configuration?.cMapUrl,
         cMapPacked: PdfJsConfiguration.configuration?.cMapPacked,
+        useSystemFonts: PdfJsConfiguration.configuration?.useSystemFonts,
+        standardFontDataUrl:
+            PdfJsConfiguration.configuration?.standardFontDataUrl,
       ),
     ).promise.toDart;
 

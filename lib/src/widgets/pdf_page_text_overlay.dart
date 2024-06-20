@@ -537,6 +537,9 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
           }
           _start = newOffset;
         }
+      // FIXME: #156/#157 handle new SelectionEventType.selectParagraph (currently only in master channel)
+      default: // case SelectionEventType.selectParagraph:
+        _start = _end = null;
     }
     _updateGeometry();
     return result;
