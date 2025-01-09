@@ -266,11 +266,22 @@ class PdfTextSearcher extends Listenable {
       final rect = m.bounds
           .toRect(page: page, scaledPageSize: pageRect.size)
           .translate(pageRect.left, pageRect.top);
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..color = m == _currentMatch ? activeMatchTextColor : matchTextColor,
+      // Add padding of 3 pixels to all sides
+      final paddedRect = Rect.fromLTWH(
+        rect.left - 2, // Add padding to the left
+        rect.top - 2, // Add padding to the top
+        rect.width + 4, // Add padding to the width (3 on each side)
+        rect.height + 4, // Add padding to the height (3 on each side)
       );
+      // Create a rounded rectangle
+      final roundedRect = RRect.fromRectAndRadius(
+        paddedRect,
+        const Radius.circular(4), // Corner radius
+      );
+      final paint = Paint()
+        ..color = m == _currentMatch ? activeMatchTextColor : matchTextColor;
+
+      canvas.drawRRect(roundedRect, paint);
     }
   }
 
