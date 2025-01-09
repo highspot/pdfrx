@@ -38,7 +38,7 @@ class _MainPageState extends State<MainPage> {
   final outline = ValueNotifier<List<PdfOutlineNode>?>(null);
   late final textSearcher = PdfTextSearcher(controller)..addListener(_update);
   final _markers = <int, List<Marker>>{};
-  PdfTextRanges? _selectedText;
+  List<PdfTextRanges>? _textSelections;
 
   void _update() {
     if (mounted) {
@@ -104,7 +104,7 @@ class _MainPageState extends State<MainPage> {
           IconButton(
             icon: const Icon(Icons.last_page),
             onPressed: () =>
-                controller.goToPage(pageNumber: controller.pages.length),
+                controller.goToPage(pageNumber: controller.pageCount),
           ),
         ],
       ),
@@ -192,11 +192,7 @@ class _MainPageState extends State<MainPage> {
                   //   r"D:\pdfrx\example\assets\hello.pdf",
                   // PdfViewer.uri(
                   //   Uri.parse(
-                  //       'https://espresso3389.github.io/pdfrx/assets/assets/PDF32000_2008.pdf'),
-                  // PdfViewer.uri(
-                  //   Uri.parse(kIsWeb
-                  //       ? 'assets/assets/hello.pdf'
-                  //       : 'https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf'),
+                  //       'https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf'),
                   // Set password provider to show password dialog
                   passwordProvider: () => passwordDialog(context),
                   controller: controller,
@@ -249,9 +245,50 @@ class _MainPageState extends State<MainPage> {
                     //   );
                     // },
                     //
-                    // Scroll-thumbs example
-                    //
-                    viewerOverlayBuilder: (context, size) => [
+                    onViewSizeChanged: (viewSize, oldViewSize, controller) {
+                      if (oldViewSize != null) {
+                        //
+                        // Calculate the matrix to keep the center position during device
+                        // screen rotation
+                        //
+                        // The most important thing here is that the transformation matrix
+                        // is not changed on the view change.
+                        final centerPosition =
+                            controller.value.calcPosition(oldViewSize);
+                        final newMatrix =
+                            controller.calcMatrixFor(centerPosition);
+                        // Don't change the matrix in sync; the callback might be called
+                        // during widget-tree's build process.
+                        Future.delayed(
+                          const Duration(milliseconds: 200),
+                          () => controller.goTo(newMatrix),
+                        );
+                      }
+                    },
+                    viewerOverlayBuilder: (context, size, handleLinkTap) => [
+                      //
+                      // Example use of GestureDetector to handle custom gestures
+                      //
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        // If you use GestureDetector on viewerOverlayBuilder, it breaks link-tap handling
+                        // and you should manually handle it using onTapUp callback
+                        onTapUp: (details) {
+                          handleLinkTap(details.localPosition);
+                        },
+                        onDoubleTap: () {
+                          controller.zoomUp(loop: true);
+                        },
+                        // Make the GestureDetector covers all the viewer widget's area
+                        // but also make the event go through to the viewer.
+                        child: IgnorePointer(
+                          child:
+                              SizedBox(width: size.width, height: size.height),
+                        ),
+                      ),
+                      //
+                      // Scroll-thumbs example
+                      //
                       // Show vertical scroll thumb on the right; it has page number on it
                       PdfViewerScrollThumb(
                         controller: controller,
@@ -296,20 +333,14 @@ class _MainPageState extends State<MainPage> {
                     //
                     // Link handling example
                     //
-                    // FIXME: a link with several areas (link that contains line-break) does not correctly
-                    // show the hover status
-                    linkWidgetBuilder: (context, link, size) => Material(
-                      color: Colors.blue.withOpacity(0.2),
-                      child: InkWell(
-                        onTap: () async {
-                          if (link.url != null) {
-                            navigateToUrl(link.url!);
-                          } else if (link.dest != null) {
-                            controller.goToDest(link.dest);
-                          }
-                        },
-                        hoverColor: Colors.blue.withOpacity(0.2),
-                      ),
+                    linkHandlerParams: PdfLinkHandlerParams(
+                      onLinkTap: (link) {
+                        if (link.url != null) {
+                          navigateToUrl(link.url!);
+                        } else if (link.dest != null) {
+                          controller.goToDest(link.dest);
+                        }
+                      },
                     ),
                     pagePaintCallbacks: [
                       textSearcher.pageTextMatchPaintCallback,
@@ -319,7 +350,7 @@ class _MainPageState extends State<MainPage> {
                       if (document == null) {
                         documentRef.value = null;
                         outline.value = null;
-                        _selectedText = null;
+                        _textSelections = null;
                         _markers.clear();
                       }
                     },
@@ -327,8 +358,8 @@ class _MainPageState extends State<MainPage> {
                       documentRef.value = controller.documentRef;
                       outline.value = await document.loadOutline();
                     },
-                    onTextSelectionChange: (selection) {
-                      _selectedText = selection;
+                    onTextSelectionChange: (selections) {
+                      _textSelections = selections;
                     },
                   ),
                 ),
@@ -367,13 +398,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   void _addCurrentSelectionToMarkers(Color color) {
-    if (controller.isReady &&
-        controller.pageNumber != null &&
-        _selectedText != null &&
-        _selectedText!.isNotEmpty) {
-      _markers
-          .putIfAbsent(controller.pageNumber!, () => [])
-          .add(Marker(color, _selectedText!));
+    if (controller.isReady && _textSelections != null) {
+      for (final selectedText in _textSelections!) {
+        _markers
+            .putIfAbsent(selectedText.pageNumber, () => [])
+            .add(Marker(color, selectedText));
+      }
       setState(() {});
     }
   }

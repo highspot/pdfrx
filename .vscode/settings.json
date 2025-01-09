@@ -9,6 +9,7 @@
     "APPEARANCEMODE",
     "ARGB",
     "autofocus",
+    "bblanchon",
     "Bezier",
     "BEZIERTO",
     "bgra",
@@ -35,6 +36,7 @@
     "dont",
     "DUPLEXTYPE",
     "DWORD",
+    "dylib",
     "EMBEDDEDGOTO",
     "Embedder",
     "endtemplate",
@@ -96,6 +98,7 @@
     "malloc",
     "MATCHCASE",
     "MATCHWHOLEWORD",
+    "maxage",
     "microtask",
     "MOVETO",
     "NATIVETEXT",
@@ -139,6 +142,8 @@
     "SCHHANDLE",
     "Schyler",
     "scrollable",
+    "selectable",
+    "selectables",
     "SIZEF",
     "SKIA",
     "SMOOTHIMAGE",
@@ -150,6 +155,7 @@
     "structtree",
     "sublist",
     "Subrect",
+    "supercedes",
     "SYSTEMTIME",
     "TEXTONLY",
     "TEXTPAGE",
@@ -249,5 +255,6 @@
     "xlocnum": "cpp",
     "xloctime": "cpp",
     "xstring": "cpp"
-  }
+  },
+  "cmake.ignoreCMakeListsMissing": true
 }

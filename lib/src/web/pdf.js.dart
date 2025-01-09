@@ -4,7 +4,6 @@
 library pdf.js;
 
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:synchronized/extension.dart';
@@ -13,40 +12,51 @@ import 'package:web/web.dart' as web;
 import '../../pdfrx.dart';
 
 /// Default pdf.js version
-const _pdfjsVersion = '3.11.174';
+const _pdfjsVersion = '4.5.136';
 
 /// Default pdf.js URL
 const _pdfjsUrl =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/$_pdfjsVersion/pdf.min.js';
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/$_pdfjsVersion/pdf.min.mjs';
 
 /// Default pdf.worker.js URL
 const _pdfjsWorkerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/$_pdfjsVersion/pdf.worker.min.js';
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/$_pdfjsVersion/pdf.worker.min.mjs';
 
 /// Default CMap URL
 const _pdfjsCMapUrl =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/$_pdfjsVersion/cmaps/';
 
-bool get _isPdfjsLoaded => globalContext['pdfjsLib'] != null;
+@JS('pdfjsLib')
+external JSAny? get _pdfjsLib;
+
+bool get _isPdfjsLoaded => _pdfjsLib != null;
 
 @JS('pdfjsLib.getDocument')
 external _PDFDocumentLoadingTask _pdfjsGetDocument(
-    _PdfjsGetDocumentParams data);
+    _PdfjsDocumentInitParameters data);
 
-extension type _PdfjsGetDocumentParams._(JSObject _) implements JSObject {
-  external _PdfjsGetDocumentParams({
+extension type _PdfjsDocumentInitParameters._(JSObject _) implements JSObject {
+  external _PdfjsDocumentInitParameters({
     String? url,
     JSArrayBuffer? data,
+    JSAny? httpHeaders,
+    bool? withCredentials,
     String? password,
     String? cMapUrl,
     bool? cMapPacked,
+    bool? useSystemFonts,
+    String? standardFontDataUrl,
   });
 
   external String? get url;
   external JSArrayBuffer? get data;
+  external JSAny? get httpHeaders;
+  external bool? get withCredentials;
   external String? get password;
   external String? get cMapUrl;
   external bool? get cMapPacked;
+  external bool? get useSystemFonts;
+  external String? get standardFontDataUrl;
 }
 
 @JS('pdfjsLib.GlobalWorkerOptions.workerSrc')
@@ -56,24 +66,37 @@ extension type _PDFDocumentLoadingTask(JSObject _) implements JSObject {
   external JSPromise<PdfjsDocument> get promise;
 }
 
-Future<PdfjsDocument> pdfjsGetDocument(String url, {String? password}) =>
+Future<PdfjsDocument> pdfjsGetDocument(
+  String url, {
+  String? password,
+  Map<String, String>? headers,
+  bool withCredentials = false,
+}) =>
     _pdfjsGetDocument(
-      _PdfjsGetDocumentParams(
+      _PdfjsDocumentInitParameters(
         url: url,
         password: password,
+        httpHeaders: headers?.jsify(),
+        withCredentials: withCredentials,
         cMapUrl: PdfJsConfiguration.configuration?.cMapUrl ?? _pdfjsCMapUrl,
         cMapPacked: PdfJsConfiguration.configuration?.cMapPacked ?? true,
+        useSystemFonts: PdfJsConfiguration.configuration?.useSystemFonts,
+        standardFontDataUrl:
+            PdfJsConfiguration.configuration?.standardFontDataUrl,
       ),
     ).promise.toDart;
 
 Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data,
         {String? password}) =>
     _pdfjsGetDocument(
-      _PdfjsGetDocumentParams(
+      _PdfjsDocumentInitParameters(
         data: data.toJS,
         password: password,
         cMapUrl: PdfJsConfiguration.configuration?.cMapUrl,
         cMapPacked: PdfJsConfiguration.configuration?.cMapPacked,
+        useSystemFonts: PdfJsConfiguration.configuration?.useSystemFonts,
+        standardFontDataUrl:
+            PdfJsConfiguration.configuration?.standardFontDataUrl,
       ),
     ).promise.toDart;
 
@@ -294,46 +317,44 @@ extension type PdfjsOutlineNode._(JSObject _) implements JSObject {
   external JSArray<PdfjsOutlineNode> get items;
 }
 
-Object _dummyJsSyncContext = {};
+final _dummyJsSyncContext = {};
 
 bool _pdfjsInitialized = false;
 
 Future<void> ensurePdfjsInitialized() async {
   if (_pdfjsInitialized) return;
   await _dummyJsSyncContext.synchronized(() async {
-    await _pdfjsInitialize();
-  });
-}
+    if (_pdfjsInitialized) return;
+    if (_isPdfjsLoaded) {
+      _pdfjsInitialized = true;
+      return;
+    }
 
-Future<void> _pdfjsInitialize() async {
-  if (_pdfjsInitialized) return;
-  if (_isPdfjsLoaded) {
+    final pdfJsSrc = PdfJsConfiguration.configuration?.pdfJsSrc ?? _pdfjsUrl;
+    try {
+      final script =
+          web.document.createElement('script') as web.HTMLScriptElement
+            ..type = 'text/javascript'
+            ..charset = 'utf-8'
+            ..async = true
+            ..type = 'module'
+            ..src = pdfJsSrc;
+      web.document.querySelector('head')!.appendChild(script);
+      await script.onLoad.first.timeout(
+          PdfJsConfiguration.configuration?.pdfJsDownloadTimeout ??
+              const Duration(seconds: 10));
+    } catch (e) {
+      throw StateError('Failed to load pdf.js from $pdfJsSrc: $e');
+    }
+
+    if (!_isPdfjsLoaded) {
+      throw StateError('Failed to load pdfjs');
+    }
+    _pdfjsWorkerSrc =
+        PdfJsConfiguration.configuration?.workerSrc ?? _pdfjsWorkerSrc;
+
     _pdfjsInitialized = true;
-    return;
-  }
-
-  final pdfJsSrc = PdfJsConfiguration.configuration?.pdfJsSrc ?? _pdfjsUrl;
-  try {
-    final script = web.document.createElement('script') as web.HTMLScriptElement
-      ..type = 'text/javascript'
-      ..charset = 'utf-8'
-      ..async = true
-      ..src = pdfJsSrc;
-    web.document.querySelector('head')!.appendChild(script);
-    await script.onLoad.first.timeout(
-        PdfJsConfiguration.configuration?.pdfJsDownloadTimeout ??
-            const Duration(seconds: 10));
-  } catch (e) {
-    throw StateError('Failed to load pdf.js from $pdfJsSrc: $e');
-  }
-
-  if (!_isPdfjsLoaded) {
-    throw StateError('Failed to load pdfjs');
-  }
-  _pdfjsWorkerSrc =
-      PdfJsConfiguration.configuration?.workerSrc ?? _pdfjsWorkerSrc;
-
-  _pdfjsInitialized = true;
+  });
 }
 
 extension type ReadableStream._(JSObject _) implements JSObject {

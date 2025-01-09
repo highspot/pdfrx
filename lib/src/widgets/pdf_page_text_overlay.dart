@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -5,31 +7,48 @@ import 'package:flutter/services.dart';
 import '../../pdfrx.dart';
 import '../utils/double_extensions.dart';
 
+/// Function to be notified when the text selection is changed.
+///
+/// [selection] is the selected text ranges.
+/// If page selection is cleared on page dispose (it means, the page is scrolled out of the view), [selection] is null.
+/// Otherwise, [selection] is the selected text ranges. If no selection is made, [selection] is an empty list.
+typedef PdfViewerPageTextSelectionChangeCallback = void Function(
+    PdfTextRanges selection);
+
 /// A widget that displays selectable text on a page.
 ///
 /// If [PdfDocument.permissions] does not allow copying, the widget does not show anything.
 class PdfPageTextOverlay extends StatefulWidget {
   const PdfPageTextOverlay({
-    required this.registrar,
+    required this.selectables,
     required this.page,
     required this.pageRect,
+    required this.selectionColor,
+    required this.enabled,
+    this.textCursor = SystemMouseCursors.text,
     this.onTextSelectionChange,
     super.key,
   });
 
-  final SelectionRegistrar? registrar;
+  final SplayTreeMap<int, PdfPageTextSelectable> selectables;
+  final bool enabled;
   final PdfPage page;
   final Rect pageRect;
-  final void Function(PdfTextRanges? ranges)? onTextSelectionChange;
+  final PdfViewerPageTextSelectionChangeCallback? onTextSelectionChange;
+  final Color selectionColor;
+  final MouseCursor textCursor;
 
   @override
   State<PdfPageTextOverlay> createState() => _PdfPageTextOverlayState();
+
+  /// Whether to show debug information.
+  static bool isDebug = false;
 }
 
 class _PdfPageTextOverlayState extends State<PdfPageTextOverlay> {
   PdfPageText? _pageText;
   List<PdfPageTextFragment>? fragments;
-  SystemMouseCursor cursor = SystemMouseCursors.basic;
+  bool selectionShouldBeEnabled = false;
 
   @override
   void initState() {
@@ -54,11 +73,11 @@ class _PdfPageTextOverlayState extends State<PdfPageTextOverlay> {
 
   void _release() {
     if (_pageText != null) {
-      _notifySelectionChange(null);
+      _notifySelectionChange(PdfTextRanges.createEmpty(_pageText!));
     }
   }
 
-  void _notifySelectionChange(PdfTextRanges? ranges) {
+  void _notifySelectionChange(PdfTextRanges ranges) {
     widget.onTextSelectionChange?.call(ranges);
   }
 
@@ -95,46 +114,60 @@ class _PdfPageTextOverlayState extends State<PdfPageTextOverlay> {
         widget.page.document.permissions?.allowsCopying == false) {
       return const SizedBox();
     }
+    final registrar = SelectionContainer.maybeOf(context);
     return MouseRegion(
       hitTestBehavior: HitTestBehavior.translucent,
-      cursor: cursor,
+      cursor: selectionShouldBeEnabled ? widget.textCursor : MouseCursor.defer,
       onHover: _onHover,
-      child: _PdfTextWidget(
-        widget.registrar,
-        this,
+      child: IgnorePointer(
+        ignoring: !(selectionShouldBeEnabled || _anySelections),
+        child: _PdfTextWidget(
+          registrar,
+          this,
+        ),
       ),
     );
   }
 
+  bool get _anySelections {
+    if (_pageText == null) return false;
+    final pageSelection = widget.selectables[_pageText!.pageNumber];
+    return pageSelection != null && pageSelection.value.hasSelection;
+  }
+
   void _onHover(PointerHoverEvent event) {
-    final point = toPdfPoint(event.localPosition, widget.page.height,
-        widget.pageRect.height / widget.page.height);
-    for (final fragment in fragments!) {
-      if (pdfRectContains(fragment.bounds, point)) {
-        _setCursor(SystemMouseCursors.text);
-        return;
+    final point = event.localPosition.toPdfPoint(widget.page, widget.pageRect);
+
+    final selectionShouldBeEnabled = isPointOnText(point);
+    if (this.selectionShouldBeEnabled != selectionShouldBeEnabled) {
+      this.selectionShouldBeEnabled = selectionShouldBeEnabled;
+      if (mounted) {
+        setState(() {});
       }
     }
-    _setCursor(SystemMouseCursors.basic);
   }
 
-  void _setCursor(SystemMouseCursor cursor) {
-    if (this.cursor == cursor) return;
-    this.cursor = cursor;
-    if (mounted) {
-      setState(() {});
+  bool isPointOnText(Offset point, {double margin = 5}) {
+    for (final fragment in fragments!) {
+      if (pdfRectContains(fragment.bounds, point, margin)) {
+        return true;
+      }
     }
+    return false;
   }
 
-  static Offset toPdfPoint(Offset point, double pageHeight, double scale) {
-    return Offset(point.dx / scale, pageHeight - point.dy / scale);
+  static bool pdfRectContains(PdfRect rect, Offset point, double margin) {
+    return rect.left - margin <= point.dx &&
+        rect.right + margin >= point.dx &&
+        rect.bottom - margin <= point.dy &&
+        rect.top + margin >= point.dy;
   }
+}
 
-  static bool pdfRectContains(PdfRect rect, Offset point) {
-    return rect.left <= point.dx &&
-        rect.right >= point.dx &&
-        rect.bottom <= point.dy &&
-        rect.top >= point.dy;
+extension _OffsetExt on Offset {
+  Offset toPdfPoint(PdfPage page, Rect pageRect) {
+    final scale = page.height / pageRect.height;
+    return Offset(dx * scale, page.height - dy * scale);
   }
 }
 
@@ -151,21 +184,28 @@ class _PdfTextWidget extends LeafRenderObjectWidget {
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return _PdfTextRenderBox(
-        DefaultSelectionStyle.of(context).selectionColor!, this);
+    final selectable = _PdfTextRenderBox(_state.widget.selectionColor, this);
+    _state.widget.selectables[_state._pageText!.pageNumber] = selectable;
+    return selectable;
   }
 
   @override
   void updateRenderObject(
       BuildContext context, _PdfTextRenderBox renderObject) {
     renderObject
-      ..selectionColor = DefaultSelectionStyle.of(context).selectionColor!
+      ..selectionColor = _state.widget.selectionColor
       ..registrar = _registrar;
+    _state.widget.selectables[_state._pageText!.pageNumber] = renderObject;
   }
 }
 
+mixin PdfPageTextSelectable implements Selectable {
+  PdfTextRanges get selectedRanges;
+}
+
 /// The code is based on the code on [Making a widget selectable](https://api.flutter.dev/flutter/widgets/SelectableRegion-class.html#widgets).SelectableRegion.2]
-class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
+class _PdfTextRenderBox extends RenderBox
+    with PdfPageTextSelectable, Selectable, SelectionRegistrant {
   _PdfTextRenderBox(
     this._selectionColor,
     this._textWidget,
@@ -200,7 +240,15 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
   List<PdfPageTextFragment> get _fragments => _textWidget._state.fragments!;
 
   @override
-  List<Rect> get boundingBoxes => <Rect>[paintBounds];
+  late final List<Rect> boundingBoxes = _fragments
+      .map((f) => f.bounds.toRect(page: _page, scaledPageSize: size))
+      .toList(growable: false);
+
+  @override
+  bool hitTestSelf(Offset position) {
+    final point = position.toPdfPoint(_page, _pageRect);
+    return _textWidget._state.isPointOnText(point);
+  }
 
   @override
   bool get sizedByParent => true;
@@ -233,11 +281,19 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
   String? _selectedText;
   Rect? _selectedRect;
   Size? _sizeOnSelection;
-  PdfTextRanges? _selectedRanges;
+  late PdfTextRanges _selectedRanges =
+      PdfTextRanges.createEmpty(_textWidget._state._pageText!);
+
+  @override
+  PdfTextRanges get selectedRanges => _selectedRanges;
+
+  void _notifySelectionChange() {
+    _textWidget._state._notifySelectionChange(_selectedRanges);
+  }
 
   void _updateGeometry() {
     _updateGeometryInternal();
-    _textWidget._state._notifySelectionChange(_selectedRanges);
+    _notifySelectionChange();
   }
 
   void _updateGeometryInternal() {
@@ -342,7 +398,7 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
         if (chars.rect == null) continue;
         sb.write(chars.text);
         selectionRects.add(chars.rect!);
-        _selectedRanges!.ranges.appendAllRanges(chars.ranges);
+        _selectedRanges.ranges.appendAllRanges(chars.ranges);
       } else {
         i++;
       }
@@ -398,6 +454,7 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
   }
 
   void _selectFragment(Offset point) {
+    _selectedRanges = PdfTextRanges.createEmpty(_textWidget._state._pageText!);
     for (final fragment in _fragments) {
       final bounds = fragment.bounds.toRect(page: _page, scaledPageSize: size);
       if (bounds.contains(point)) {
@@ -423,6 +480,10 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
           ),
           selectionRects: [bounds],
         );
+        _selectedRanges.ranges.appendRange(PdfTextRange(
+          start: fragment.index,
+          end: fragment.end,
+        ));
         return;
       }
     }
@@ -431,6 +492,10 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
 
   @override
   SelectionResult dispatchSelectionEvent(SelectionEvent event) {
+    if (!_textWidget._state.widget.enabled) {
+      return SelectionResult.none;
+    }
+
     var result = SelectionResult.none;
     switch (event.type) {
       case SelectionEventType.startEdgeUpdate:
@@ -458,6 +523,8 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
             (event as SelectWordSelectionEvent).globalPosition,
           ),
         );
+        _notifySelectionChange();
+        return SelectionResult.none;
       case SelectionEventType.granularlyExtendSelection:
         result = SelectionResult.end;
         final extendSelectionEvent = event as GranularlyExtendSelectionEvent;
@@ -537,6 +604,9 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
           }
           _start = newOffset;
         }
+      // FIXME: #156/#157 handle new SelectionEventType.selectParagraph (currently only in master channel)
+      default: // case SelectionEventType.selectParagraph:
+        _start = _end = null;
     }
     _updateGeometry();
     return result;
@@ -571,26 +641,28 @@ class _PdfTextRenderBox extends RenderBox with Selectable, SelectionRegistrant {
 
     final scale =
         _sizeOnSelection != null ? size.width / _sizeOnSelection!.width : 1.0;
-    // for (int i = 0; i < _fragments.length; i++) {
-    //   final f = _fragments[i];
-    //   final rect = f.bounds.toRect(page: _page, scaledPageSize: size);
-    //   context.canvas.drawRect(
-    //     rect.shift(offset),
-    //     Paint()
-    //       ..style = PaintingStyle.stroke
-    //       ..color = Colors.red
-    //       ..strokeWidth = 1,
-    //   );
-    // }
+    if (PdfPageTextOverlay.isDebug) {
+      for (int i = 0; i < _fragments.length; i++) {
+        final f = _fragments[i];
+        final rect = f.bounds.toRect(page: _page, scaledPageSize: size);
+        context.canvas.drawRect(
+          rect.shift(offset),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..color = Colors.red
+            ..strokeWidth = 1,
+        );
+      }
 
-    // if (_selectedRect != null) {
-    //   context.canvas.drawRect(
-    //     (_selectedRect! * scale).shift(offset),
-    //     Paint()
-    //       ..style = PaintingStyle.fill
-    //       ..color = Colors.blue.withAlpha(100),
-    //   );
-    // }
+      if (_selectedRect != null) {
+        context.canvas.drawRect(
+          (_selectedRect! * scale).shift(offset),
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = Colors.blue.withAlpha(100),
+        );
+      }
+    }
 
     if (!_geometry.value.hasSelection) {
       return;

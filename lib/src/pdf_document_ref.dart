@@ -25,7 +25,9 @@ typedef PdfDocumentLoaderReportCallback = void Function(
   Duration elapsedTime,
 );
 
-/// PdfDocumentRef controls loading of a [PdfDocument].
+/// PdfDocumentRef controls loading of a [PdfDocument] and it also provide you with a way to use [PdfDocument]
+/// safely in your long running async operations.
+///
 /// There are several types of [PdfDocumentRef]s predefined:
 /// * [PdfDocumentRefAsset] loads the document from asset.
 /// * [PdfDocumentRefUri] loads the document from network.
@@ -35,6 +37,17 @@ typedef PdfDocumentLoaderReportCallback = void Function(
 /// * [PdfDocumentRefDirect] directly contains [PdfDocument].
 ///
 /// Or you can create your own [PdfDocumentRef] by extending the class.
+///
+/// The following fragment explains how to get [PdfDocument] using [PdfDocumentRef]:
+///
+/// ```dart
+/// await documentRef.resolveListenable().useDocument(
+///   (document) async {
+///     // Use the document here
+///   },
+/// );
+/// ```
+///
 abstract class PdfDocumentRef {
   const PdfDocumentRef({
     this.autoDispose = true,
@@ -128,14 +141,25 @@ class PdfDocumentRefUri extends PdfDocumentRef
     this.firstAttemptByEmptyPassword = true,
     super.autoDispose = true,
     this.preferRangeAccess = false,
+    this.headers,
+    this.withCredentials = false,
   });
 
+  /// The URI to load the document.
   final Uri uri;
   @override
   final PdfPasswordProvider? passwordProvider;
   @override
   final bool firstAttemptByEmptyPassword;
+
+  /// Whether to prefer range access or not (Not supported on Web).
   final bool preferRangeAccess;
+
+  /// Additional HTTP headers especially for authentication/authorization.
+  final Map<String, String>? headers;
+
+  /// Whether to include credentials in the request (Only supported on Web).
+  final bool withCredentials;
 
   @override
   String get sourceName => uri.toString();
@@ -152,6 +176,8 @@ class PdfDocumentRefUri extends PdfDocumentRef
         progressCallback: progressCallback,
         reportCallback: reportCallback,
         preferRangeAccess: preferRangeAccess,
+        headers: headers,
+        withCredentials: withCredentials,
       );
 
   @override

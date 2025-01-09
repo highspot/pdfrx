@@ -1,3 +1,221 @@
+# 1.0.99
+
+- Introduces Pdfrx.fontPaths to set pdfium font loading path (#140)
+
+# 1.0.98
+
+- Introduces PdfViewerController.calcFitZoomMatrices to realize fit-to-width easier
+
+# 1.0.97
+
+- Document updates
+
+# 1.0.96
+
+- FIXED: #260 onTextSelectionChange callback cant be called
+
+# 1.0.95
+
+- FIXED: #273; apart from the ream WASM support, it fixes several compilation issues with --wasm option
+
+# 1.0.94
+
+- Merge PR #272; Fix minScale is not used
+
+# 1.0.93
+
+- Merge PR #264; Check for non-existent zoom element in PdfDest.params in some PDFs
+- FIXED: Widget tests starts to fail when using PdfViewer widget #263
+
+# 1.0.92
+
+- Merge PR #262; Remove redundant check that breaks building on some systems
+
+# 1.0.91
+
+- Fixes selection issues caused by the changes on 1.0.90
+
+# 1.0.90
+
+- Introduces selectableRegionInjector/perPageSelectableRegionInjector (#256)
+
+# 1.0.89
+
+- web 1.1.0 support (#254)
+
+# 1.0.88
+
+- Merge PR #251
+
+# 1.0.87
+
+- BREAKING CHANGE: add more parameters to PdfViewerParams.normalizeMatrix to make it easier to handle more complex situations (#239)
+
+# 1.0.86
+
+- Add PdfViewerParams.normalizeMatrix to customize the transform matrix restriction; customizing existing logic on _PdfViewerState._makeMatrixInSafeRange; for issues like #239
+
+# 1.0.85
+
+- Fixes single-page layout issue on viewer start (#247)
+- Fixes blurry image issues (#245, #232)
+
+# 1.0.84
+
+- Merge PR #230 to add try-catch on UTF-8 decoding of URI path
+
+# 1.0.83
+
+- Web related improvements
+  - PDF.js 4.5.136
+  - Remove dependency to dart:js_interop_unsafe
+  - Remove unnecessary synchronized call
+- Improve text selection stability (#4, #185)
+- Add more mounted checks to improve PdfViewer stability and speed
+
+# 1.0.82
+
+- collection/rxdart dependency workaround (#211)
+
+# 1.0.81
+
+- Introduces PdfViewerController.useDocument to make it easy to use PdfDocument safely
+- Introduces PdfViewerController.pageCount to get page count without explicitly access PdfViewerController.pages
+- PdfViewerController.document/PdfViewerController.pages are now deprecated
+
+# 1.0.80
+
+- BREAKING CHANGE: PdfViewerParams.viewerOverlayBuilder introduces third parameter named handleLinkTap, which is used with GestureDetector to handle link-tap events on user code (#175)
+- Fix typos on README.md
+
+# 1.0.79
+
+- FIXED: RangeError on PdfViewer.uri when missing "Expires" header (#206)
+
+# 1.0.78
+
+- Add packagingOptions pickFirst to workaround multiple libpdfium.so problem on Android build (#8)
+- FIXED: \_relayoutPages may cause null access
+- Update README.md to explain PdfViewerParam.linkHandlerParams for link handling
+
+# 1.0.77
+
+- #175: Woops, just missing synchronized to call loadLinks causes multiple load invocations...
+
+# 1.0.76
+
+- Add several tweaks to reduce PdfLink's memory footprint (Related: #175)
+- Introduces PdfViewerParam.linkHandlerParams and PdfLinkHandlerParams to show/handle PDF links without using Flutter Widgets (#175)
+
+# 1.0.75
+
+- PDF.js 4.4.168
+
+# 1.0.74
+
+- Introduces PdfViewerController.getPdfPageHitTestResult
+- Introduces PdfViewerController.layout to get page layout
+
+# 1.0.73
+
+- Introduces PdfViewerParams.onViewSizeChanged, which is called on view size change
+  - The feature can be used to keep the screen center on device screen rotation (#194)
+
+# 1.0.72
+
+- FIXED: Example code is not compilable
+- FIXED: Marker could not be placed correctly on the example code (#189)
+- FIXED: Updated podspec file not to download the same archive again and again (#154)
+- Introduces chromium/6555 for all platforms
+  - Darwin uses pdfium-apple-v9 (chromium/6555)
+  - ~~Improves memory consumption by pdfium's internal caching feature (#184)~~
+
+# 1.0.71
+
+- Introduces withCredentials for Web to download PDF file using current session credentials (Cookie) (#182)
+- FIXED: Re-download logic error that causes 416 on certain web site (#183)
+
+# 1.0.70
+
+- PdfViewer calls re-layout logic on every zoom ratio changes (#131)
+- Add PdfViewerParams.interactionEndFrictionCoefficient (#176)
+- Minor fix for downloading cache
+- rxdart gets back to 0.27.7 because 0.28.0 causes incompatibility with several other plugins...
+
+# 1.0.69
+
+- FIXED: Small Page Size PDF Not Scaling to Fit Screen (#174)
+
+# 1.0.68
+
+- Introduces PdfViewerController.setCurrentPageNumber (#152)
+- BREAKING CHANGE: Current page number behavior change (#152)
+- BREAKING CHANGE: PdfPageAnchor behavior changes for existing PdfPageAnchor enumeration values.
+- Introduces PdfPageAnchor.top/left/right/bottom
+- Introduces PdfViewerController.calcMatrixToEnsureRectVisible
+
+# 1.0.67
+
+- FIXED: LateInitializationError: Field '\_cacheBlockCount@1436474497' has not been initialized (#167)
+
+# 1.0.66
+
+- FIXED: PdfException: Failed to load PDF document (FPDF_GetLastError=3) (#166)
+- Add explicit HTTP error handling code (to show the error detail)
+- bblanchon/pdfium-binaries 127.0.6517.0 (chromium/6517) (iOS/macOS is still using 6406)
+
+# 1.0.65
+
+- Remove dependency to intl (#151)
+
+# 1.0.64
+
+- Android: minSdkVersion to 21 (related #158)
+
+# 1.0.63
+
+- Workaround for SelectionEventType.selectParagraph that is introduced in master (#156/PR #157)
+  - The code uses `default` to handle the case but we should update it with the "right" code when it is introduced to the stable
+
+# 1.0.62
+
+- iOS/macOS also uses bblanchon/pdfium-binaries 125.0.6406.0 (chromium/6406)
+- Additional fix for [#147](https://github.com/espresso3389/pdfrx/issues/147)
+- Additional implementation for [#132](https://github.com/espresso3389/pdfrx/issues/132)
+
+# 1.0.61
+
+- Introduces PdfViewerParams.pageDropShadow
+- Introduces PdfViewerParams.pageBackgroundPaintCallbacks
+
+# 1.0.60
+
+- bblanchon/pdfium-binaries 125.0.6406.0 (chromium/6406)
+  - default_min_sdk_version=21 to support lower API level devices ([#145](https://github.com/espresso3389/pdfrx/issues/145))
+
+# 1.0.59
+
+- Fixes concurrency issue on PdfDocument dispose (#143)
+- FIXED: Null check operator used on \_guessCurrentPage ([#147](https://github.com/espresso3389/pdfrx/issues/147))
+
+# 1.0.58
+
+- Any API calls that wraps PDFium are now completely synchronized. They are run in an app-wide single worker isolate
+  - This is because PDFium does not support any kind of concurrency and even different PdfDocument instances could not be called concurrently
+
+# 1.0.57
+
+- FIXED: possible double-dispose on race condition (#136)
+- Add mechanism to cancel partial real size rendering (#137)
+- WIP: Custom HTTP header for downloading PDF files (#132)
+- Text search match color customization (#142)
+
+# 1.0.56
+
+- Reduce total number of Isolates used when opening PDF documents
+- Add PdfViewerParams.calculateCurrentPageNumber
+- FIXED: Could not handle certain destination coordinates correctly (#135)
+
 # 1.0.55
 
 - Improve memory consumption by opening/closing page handle every time pdfrx need it (PR #125)
@@ -219,7 +437,7 @@ _NOTE: On pub.dev, 1.0.0+ versions gets [[ANALYSIS ISSUE]](https://pub.dev/packa
 ## 0.4.18
 
 - PdfDocumentProvider supercedes PdfDocumentStore (PR #42)
-- pdfium 6259 for Windows, Linux, and Android
+- PDFium 6259 for Windows, Linux, and Android
 - FIXED: Bug: Tests fail due to null operator check on PdfViewerController #44
 
 ## 0.4.17
