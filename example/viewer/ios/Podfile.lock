@@ -27,10 +27,10 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c
-  pdfrx: 0df5c632203a85f217479357c234522e3859f388
-  url_launcher_ios: bbd758c6e7f9fd7b5b1d4cde34d2b95fcce5e812
+  path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
+  pdfrx: 07fc287c47ea8d027c4ed56457f8a1aa74d73594
+  url_launcher_ios: 5334b05cef931de560670eeae103fd3e431ac3fe
 
 PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.14.3
