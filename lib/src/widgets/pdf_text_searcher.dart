@@ -267,11 +267,11 @@ class PdfTextSearcher extends Listenable {
           .toRect(page: page, scaledPageSize: pageRect.size)
           .translate(pageRect.left, pageRect.top);
       // Add padding of 3 pixels to all sides
-      final paddedRect = Rect.fromLTWH(
-        rect.left - 2, // Add padding to the left
-        rect.top - 2, // Add padding to the top
-        rect.width + 4, // Add padding to the width (3 on each side)
-        rect.height + 4, // Add padding to the height (3 on each side)
+      final paddedRect = Rect.fromLTRB(
+        rect.left - 1.2, // Add padding to the left
+        rect.top - 1.2, // Add padding to the top
+        rect.right + 1.2, // Add padding to the width (3 on each side)
+        rect.bottom + 1.2, // Add padding to the height (3 on each side)
       );
       // Create a rounded rectangle
       final roundedRect = RRect.fromRectAndRadius(
