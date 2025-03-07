@@ -257,9 +257,7 @@ class PdfTextSearcher extends Listenable {
 
     for (int i = range.start; i < range.end; i++) {
       final m = _matches[i];
-      final rect = m.bounds
-          .toRect(page: page, scaledPageSize: pageRect.size)
-          .translate(pageRect.left, pageRect.top);
+      final rect = m.bounds.toRect(page: page, scaledPageSize: pageRect.size).translate(pageRect.left, pageRect.top);
       // Add padding of 3 pixels to all sides
       final paddedRect = Rect.fromLTRB(
         rect.left - 1.2, // Add padding to the left
@@ -272,8 +270,7 @@ class PdfTextSearcher extends Listenable {
         paddedRect,
         const Radius.circular(4), // Corner radius
       );
-      final paint = Paint()
-        ..color = m == _currentMatch ? activeMatchTextColor : matchTextColor;
+      final paint = Paint()..color = m == _currentMatch ? activeMatchTextColor : matchTextColor;
 
       canvas.drawRRect(roundedRect, paint);
     }
