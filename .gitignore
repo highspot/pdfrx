@@ -16,6 +16,13 @@ migrate_working_dir/
 *.iws
 .idea/
 
+# C++
+.cxx
+
+# For pdfium builds on macOS
+.build/
+.swiftpm/
+
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
@@ -30,5 +37,4 @@ build/
 
 /test/.tmp
 
-# FVM Version Cache
-.fvm/
+CLAUDE.md

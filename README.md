@@ -16,7 +16,8 @@ A [demo site](https://espresso3389.github.io/pdfrx/) using Flutter Web
 - Windows
 - macOS
 - Linux (even on Raspberry PI)
-- Web (\*using [PDF.js](https://mozilla.github.io/pdf.js/))
+- Web
+  - By default, pdfrx uses [PDF.js](https://mozilla.github.io/pdf.js/) but you can enable [Pdfium WASM support](https://github.com/espresso3389/pdfrx/wiki/Enable-Pdfium-WASM-support)
 
 ## Example Code
 
@@ -52,31 +53,21 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdfrx: ^1.0.99
+  pdfrx: ^1.1.33
 ```
 
 ### Note for Windows
 
-Ensure your Windows installation enables _Developer Mode_.
+**Ensure your Windows installation enables [Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode).**
 
-The build process internally uses symbolic link and it requires Developer Mode to be enabled.
+The build process internally uses *symbolic links* and it requires Developer Mode to be enabled.
 Without this, you may encounter errors [like this](https://github.com/espresso3389/pdfrx/issues/34).
 
-## Open PDF File
+## Customizations/Features
 
-[PdfViewer](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer-class.html) supports following functions to open PDF file on specific medium:
+You can customize the behaviors and the viewer look and feel by configuring [PdfViewerParams](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams-class.html).
 
-- [PdfViewer.asset](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.asset.html)
-  - Open PDF of Flutter's asset
-- [PdfViewer.file](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.file.html)
-  - Open PDF from file
-    - macOS: may be blocked by [App Sandbox](https://github.com/espresso3389/pdfrx/wiki/macOS:-Deal-with-App-Sandbox)
-- [PdfViewer.uri](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewer/PdfViewer.uri.html)
-  - Open PDF from URI (`https://...` or relative path)
-    - Flutter Web: may be blocked by [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
-    - macOS: may be blocked by [App Sandbox](https://github.com/espresso3389/pdfrx/wiki/macOS:-Deal-with-App-Sandbox)
-
-### Deal with Password Protected PDF Files
+## Deal with Password Protected PDF Files
 
 ```dart
 PdfViewer.asset(
@@ -88,11 +79,7 @@ PdfViewer.asset(
 ),
 ```
 
-For more customization and considerations, see [Deal with Password Protected PDF Files using PasswordProvider](https://github.com/espresso3389/pdfrx/wiki/Deal-with-Password-Protected-PDF-Files-using-PasswordProvider).
-
-## Customizations/Features
-
-You can customize the behaviour and the viewer look and feel by configuring [PdfViewerParams](https://pub.dev/documentation/pdfrx/latest/pdfrx/PdfViewerParams-class.html).
+See [Deal with Password Protected PDF Files using PasswordProvider](https://github.com/espresso3389/pdfrx/wiki/Deal-with-Password-Protected-PDF-Files-using-PasswordProvider) for more information.
 
 ### Text Selection
 
