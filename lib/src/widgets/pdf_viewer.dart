@@ -2193,6 +2193,11 @@ class _PdfViewerKeyHandlerState extends State<_PdfViewerKeyHandler> {
       parentNode: widget.params.parentNode,
       autofocus: widget.params.autofocus,
       canRequestFocus: widget.params.canRequestFocus,
+      onFocusChange: (hasFocus) {
+        if (!hasFocus) {
+          _stopRepeating();
+        }
+      },
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           // Key pressed down
