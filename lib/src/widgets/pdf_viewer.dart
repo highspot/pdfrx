@@ -2169,7 +2169,15 @@ class _PdfViewerKeyHandlerState extends State<_PdfViewerKeyHandler> {
     _timer = Timer(widget.params.initialDelay, () {
       // Start repeating at the specified interval
       _timer = Timer.periodic(widget.params.repeatInterval, (_) {
-        widget.onKeyRepeat(widget.params, _currentKey!, false);
+        final currentKey = _currentKey;
+        // Guard against a missed KeyUpEvent (which can happen when focus
+        // routing changes while scrolling, e.g. at the last/first page):
+        // if the key is no longer physically held, stop repeating.
+        if (currentKey == null || !HardwareKeyboard.instance.logicalKeysPressed.contains(currentKey)) {
+          _stopRepeating();
+          return;
+        }
+        widget.onKeyRepeat(widget.params, currentKey, false);
       });
     });
   }
@@ -2199,20 +2207,31 @@ class _PdfViewerKeyHandlerState extends State<_PdfViewerKeyHandler> {
         }
       },
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          // Key pressed down
-          if (_currentKey == null) {
-            if (widget.onKeyRepeat(widget.params, event.logicalKey, true)) {
-              _startRepeating(node, event.logicalKey);
-              return KeyEventResult.handled;
-            }
-          }
-        } else if (event is KeyUpEvent) {
-          // Key released
-          if (_currentKey == event.logicalKey) {
+        final key = event.logicalKey;
+        if (event is KeyUpEvent) {
+          // Key released.
+          if (_currentKey == key) {
             _stopRepeating();
             return KeyEventResult.handled;
           }
+          return KeyEventResult.ignored;
+        }
+
+        // KeyDownEvent or KeyRepeatEvent.
+        if (_currentKey == key) {
+          // Already tracking this key. Swallow the OS auto-repeat
+          // (KeyRepeatEvent) so arrow keys don't fall through to focus
+          // traversal, which would move focus off the viewer (breaking the
+          // up arrow) and stop scrolling. Our own timer drives the repeat.
+          return KeyEventResult.handled;
+        }
+
+        // First press, or a different key takes over even if the previous
+        // key's KeyUpEvent was never delivered and left _currentKey stale.
+        if (widget.onKeyRepeat(widget.params, key, true)) {
+          _stopRepeating();
+          _startRepeating(node, key);
+          return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
       },
